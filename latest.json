@@ -1,0 +1,11 @@
+{
+  "_comment": "Groove Activator — アップデート通知の元データ。GA はこの 1 本だけを読む。",
+  "_howto": "新しい版を出したら latest と notes を書き換えて push するだけ。page と URL は変えない。",
+  "latest": "1.2.2",
+  "min_supported": "1.0.4",
+  "page": "https://ajitosounds.github.io/groove-activator/#update",
+  "notes": {
+    "ja": "窓の右下のつまみで大きさを変えられるようになりました。大きさは保存されます。Analog Activator の Initialize で OFS が 0ms に戻ります。",
+    "en": "You can now resize the window by the handle at its bottom-right, and the size is remembered. Initialize now returns the Analog Activator's OFS to 0 ms."
+  }
+}
