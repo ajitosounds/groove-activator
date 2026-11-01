@@ -1,0 +1,803 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>VCS3 Pin Matrix</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a wooden-cheeked instrument case; modules on the left, the 17×16 pin matrix, joystick and scope on the right, keyboard along the bottom. */
+:root {
+  color-scheme: dark;
+  --wood: #6b4226;
+  --wood-dark: #3f2615;
+  --panel: #1b1d1c;
+  --panel-2: #242826;
+  --panel-3: #2f3431;
+  --ink: #ece8dc;
+  --muted: #a3a497;
+  --faint: #6d7069;
+  --line: #3b403c;
+  --pin-white: #f2f0e8;
+  --pin-red: #d8442f;
+  --pin-green: #3fa35b;
+  --hole: #0b0c0c;
+  --led: #ff5a36;
+  --c-osc: #c9563c;
+  --c-noise: #d9d4c5;
+  --c-ring: #8a7bc4;
+  --c-filter: #3f86c9;
+  --c-env: #e1b43c;
+  --c-rev: #4fa59a;
+  --c-out: #ece8dc;
+  --c-stick: #b98a54;
+  --f-panel: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  --f-body: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { background: var(--wood-dark); }
+body {
+  margin: 0; color: var(--ink); font: 14px/1.5 var(--f-body);
+  padding-block: 18px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.case {
+  max-width: 1320px; margin: 0 auto; border-radius: 10px;
+  background: linear-gradient(90deg, var(--wood) 0 14px, var(--panel) 14px calc(100% - 14px), var(--wood) calc(100% - 14px));
+  padding: 14px 26px 22px; box-shadow: 0 10px 40px rgba(0,0,0,.5);
+}
+header.top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; padding: 6px 0 14px; border-bottom: 1px solid var(--line); }
+.brand { font: 700 28px/1 var(--f-panel); letter-spacing: .08em; text-transform: uppercase; }
+.brand small { display: block; font: 500 12px/1.4 var(--f-panel); letter-spacing: .14em; color: var(--muted); }
+.tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-left: auto; }
+button, select, textarea { font: 600 13px/1 var(--f-panel); letter-spacing: .06em; color: var(--ink); }
+button, select {
+  background: var(--panel-3); border: 1px solid var(--line); border-radius: 5px; padding: 8px 12px; cursor: pointer; text-transform: uppercase;
+}
+button:hover, select:hover { border-color: var(--muted); }
+button:focus-visible, select:focus-visible, .knob:focus-visible, .cell:focus-visible, .stick:focus-visible, textarea:focus-visible { outline: 2px solid var(--c-env); outline-offset: 2px; }
+button.power { background: var(--pin-red); border-color: var(--pin-red); color: #fff; min-width: 120px; }
+button.power.on { background: var(--panel-3); border-color: var(--led); color: var(--led); }
+.status { font: 12px/1.3 var(--f-mono); color: var(--muted); min-height: 1em; }
+
+.main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 560px); gap: 20px; padding-top: 16px; }
+@media (max-width: 1100px) { .main { grid-template-columns: minmax(0, 1fr); } }
+.modules { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; align-content: start; }
+.mod { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 0 10px 10px; min-width: 0; }
+.mod h2 {
+  margin: 0 -10px 10px; padding: 6px 10px; font: 700 14px/1 var(--f-panel); letter-spacing: .14em; text-transform: uppercase;
+  border-bottom: 2px solid var(--mc, var(--muted)); display: flex; justify-content: space-between; align-items: center; gap: 8px;
+}
+.mod h2 span { font: 500 11px/1 var(--f-body); letter-spacing: 0; color: var(--muted); text-transform: none; }
+.mod.wide { grid-column: 1 / -1; }
+.knobs { display: flex; flex-wrap: wrap; gap: 6px 4px; justify-content: space-around; }
+
+.knob { width: 62px; display: flex; flex-direction: column; align-items: center; cursor: ns-resize; touch-action: none; user-select: none; -webkit-user-select: none; border-radius: 6px; }
+.knob svg { width: 56px; height: 56px; display: block; }
+.knob .tick { stroke: var(--faint); stroke-width: 1.4; }
+.knob .num { fill: var(--faint); font: 7px var(--f-mono); text-anchor: middle; dominant-baseline: middle; }
+.knob .skirt { fill: #111312; stroke: #000; }
+.knob .cap { fill: var(--kc, var(--muted)); }
+.knob .ind { stroke: #111; stroke-width: 2.6; stroke-linecap: round; }
+.knob .ring { fill: none; stroke: var(--kc, var(--muted)); stroke-width: 2; opacity: .55; }
+.knob label { font: 600 11px/1.1 var(--f-panel); letter-spacing: .08em; text-transform: uppercase; text-align: center; color: var(--ink); margin-top: 1px; pointer-events: none; }
+.knob output { font: 10px/1.2 var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; pointer-events: none; white-space: nowrap; }
+
+.led { width: 10px; height: 10px; border-radius: 50%; background: var(--led); opacity: .12; box-shadow: 0 0 8px var(--led); display: inline-block; }
+.trigrow { display: flex; gap: 8px; align-items: center; justify-content: center; margin-top: 8px; }
+.trigrow button { flex: 1; }
+
+/* Matrix */
+.side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.matrix-wrap { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 0 10px 10px; }
+.matrix-scroll { overflow-x: auto; padding-bottom: 4px; }
+.matrix { display: grid; grid-template-columns: 104px repeat(16, 24px); gap: 3px; width: max-content; }
+.mh { font: 600 10px/1 var(--f-panel); letter-spacing: .05em; color: var(--muted); text-transform: uppercase; }
+.colh { writing-mode: vertical-rl; transform: rotate(180deg); height: 70px; display: flex; align-items: center; justify-content: flex-start; padding: 2px 0; white-space: nowrap; }
+.colh b, .rowh b { color: var(--ink); font-weight: 700; }
+.rowh { display: flex; align-items: center; gap: 5px; white-space: nowrap; height: 24px; }
+.rowh i { width: 8px; height: 8px; border-radius: 2px; background: var(--rc); flex: none; }
+.mh.hl { color: var(--c-env); }
+.cell {
+  width: 24px; height: 24px; border-radius: 50%; padding: 0; border: 0; cursor: pointer; position: relative;
+  background: radial-gradient(circle at 50% 50%, var(--hole) 0 32%, #3a3f3b 34% 52%, var(--panel-3) 54%);
+}
+.cell.x { background: radial-gradient(circle at 50% 50%, var(--hole) 0 32%, #3a3f3b 34% 52%, #3a3226 54%); }
+.cell[data-pin]::after {
+  content: ""; position: absolute; inset: 4px; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,.7), inset 0 -2px 3px rgba(0,0,0,.35);
+}
+.cell[data-pin="w"]::after { background: var(--pin-white); }
+.cell[data-pin="r"]::after { background: var(--pin-red); }
+.cell[data-pin="g"]::after { background: var(--pin-green); }
+.brushes { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 8px; }
+.brushes button { display: inline-flex; gap: 6px; align-items: center; padding: 6px 9px; }
+.brushes button[aria-pressed="true"] { border-color: var(--c-env); color: var(--c-env); }
+.dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+.hint { font-size: 12px; color: var(--muted); margin: 6px 0 0; }
+
+.row2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 12px; }
+@media (max-width: 520px) { .row2 { grid-template-columns: minmax(0, 1fr); } }
+.stick {
+  width: 100%; max-width: 190px; aspect-ratio: 1; margin: 0 auto; border-radius: 6px; position: relative; touch-action: none; cursor: grab;
+  background:
+    linear-gradient(var(--line), var(--line)) center / 1px 100% no-repeat,
+    linear-gradient(var(--line), var(--line)) center / 100% 1px no-repeat,
+    var(--panel);
+  border: 1px solid var(--line);
+}
+.stick .knobtop { position: absolute; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #e7c08c, var(--c-stick) 55%, #5d3f1f); box-shadow: 0 2px 6px rgba(0,0,0,.6); pointer-events: none; }
+.stickvals { font: 11px var(--f-mono); color: var(--muted); text-align: center; margin-top: 4px; font-variant-numeric: tabular-nums; }
+canvas.scope { width: 100%; height: 150px; display: block; background: #0d140f; border-radius: 4px; border: 1px solid var(--line); }
+
+/* Keyboard */
+.kbd-wrap { margin-top: 16px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 0 10px 12px; }
+.kbd-head { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: space-between; }
+.kbd-scroll { overflow-x: auto; }
+.keys { position: relative; height: 120px; display: flex; width: max-content; margin-top: 8px; user-select: none; -webkit-user-select: none; touch-action: none; }
+.wk { width: 38px; height: 120px; background: linear-gradient(#f4f1e6, #d9d4c4); border: 1px solid #111; border-radius: 0 0 5px 5px; position: relative; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px; font: 10px var(--f-mono); color: #555; }
+.bk { width: 24px; height: 74px; background: linear-gradient(#2a2a2a, #090909); border: 1px solid #000; border-radius: 0 0 4px 4px; position: absolute; top: 0; z-index: 2; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px; font: 9px var(--f-mono); color: #888; }
+.wk.down { background: linear-gradient(#e1b43c, #c79a26); }
+.bk.down { background: linear-gradient(#a37a1c, #6d5110); }
+.oct { display: flex; gap: 6px; align-items: center; font: 12px var(--f-mono); color: var(--muted); }
+
+.patchio { margin-top: 16px; display: grid; gap: 8px; }
+.patchio textarea { width: 100%; min-height: 70px; background: var(--panel); border: 1px solid var(--line); border-radius: 5px; padding: 8px; font: 12px/1.4 var(--f-mono); letter-spacing: 0; color: var(--ink); resize: vertical; }
+.patchio .btns { display: flex; flex-wrap: wrap; gap: 8px; }
+details.help { margin-top: 16px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; }
+details.help summary { cursor: pointer; font: 700 14px var(--f-panel); letter-spacing: .12em; text-transform: uppercase; }
+details.help p, details.help li { max-width: 70ch; color: var(--muted); }
+details.help b { color: var(--ink); }
+@media (max-width: 600px) {
+  .case { padding: 12px 18px 18px; background: linear-gradient(90deg, var(--wood) 0 8px, var(--panel) 8px calc(100% - 8px), var(--wood) calc(100% - 8px)); }
+  .tools { margin-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="case">
+  <header class="top">
+    <div class="brand">VCS3 Pin Matrix<small>3 oscillators · noise · ring mod · filter · trapezoid · spring reverb</small></div>
+    <div class="tools">
+      <button class="power" id="power" type="button">電源 ON</button>
+      <select id="preset" aria-label="プリセット"></select>
+      <button id="clearPins" type="button" title="マトリクスのピンをすべて抜く">ピンを全部抜く</button>
+    </div>
+    <div class="status" id="status">電源を入れると音が出ます。まずプリセットを選んで、キーボード（Z〜M／Q〜U）を弾いてみてください。</div>
+  </header>
+
+  <div class="main">
+    <section class="modules" id="modules" aria-label="モジュール"></section>
+
+    <section class="side">
+      <div class="matrix-wrap">
+        <div class="mod" style="border:0;background:none;padding:0;--mc:var(--c-env)"><h2>Patch Matrix <span>行＝出どころ → 列＝行き先</span></h2></div>
+        <div class="brushes" role="group" aria-label="差すピンの色">
+          <button type="button" data-brush="w" aria-pressed="true"><i class="dot" style="background:var(--pin-white)"></i>白 ×1（誤差あり）</button>
+          <button type="button" data-brush="r" aria-pressed="false"><i class="dot" style="background:var(--pin-red)"></i>赤 ×1（精密）</button>
+          <button type="button" data-brush="g" aria-pressed="false"><i class="dot" style="background:var(--pin-green)"></i>緑 ×0.25</button>
+        </div>
+        <div class="matrix-scroll"><div class="matrix" id="matrix"></div></div>
+        <p class="hint">穴をクリックで選んだ色のピンを差す。同じ色のピンをもう一度クリックで抜く。白ピンは 1 本ごとに ±2% のばらつきがあるので、音程をきっちり合わせたい所（KBD → OSC）は赤ピンを使います。</p>
+      </div>
+
+      <div class="row2">
+        <div class="mod" style="--mc:var(--c-stick)">
+          <h2>Joystick <span>ダブルクリックで中央</span></h2>
+          <div class="stick" id="stick" tabindex="0" role="group" aria-label="ジョイスティック（矢印キーでも動かせます）"><div class="knobtop" id="stickTop"></div></div>
+          <div class="stickvals" id="stickVals">X 0.00 · Y 0.00</div>
+          <div class="knobs" id="stickKnobs" style="margin-top:6px"></div>
+        </div>
+        <div class="mod" style="--mc:var(--c-rev)">
+          <h2>Scope <span>出力の波形</span></h2>
+          <canvas class="scope" id="scope" width="600" height="300"></canvas>
+          <div class="knobs" id="masterKnobs" style="margin-top:6px"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="kbd-wrap">
+    <div class="mod" style="border:0;background:none;padding:0;--mc:var(--c-osc)"><h2>Keyboard <span>KBD 行の電圧（赤ピンで OSC へ）と、ENVELOPE のトリガー</span></h2></div>
+    <div class="kbd-head">
+      <div class="oct"><button type="button" id="octDown" aria-label="1 オクターブ下げる">− OCT</button><span id="octLabel">C3–C5</span><button type="button" id="octUp" aria-label="1 オクターブ上げる">OCT +</button></div>
+      <div class="knobs" id="kbdKnobs"></div>
+    </div>
+    <div class="kbd-scroll"><div class="keys" id="keys"></div></div>
+  </div>
+
+  <div class="patchio">
+    <div class="btns">
+      <button type="button" id="copyPatch">パッチをコピー</button>
+      <button type="button" id="loadPatch">貼ったパッチを読み込む</button>
+      <button type="button" id="savePatch">このブラウザに保存</button>
+      <button type="button" id="restorePatch">保存したものを呼び出す</button>
+    </div>
+    <textarea id="patchText" aria-label="パッチ（JSON）" placeholder="ここにパッチ（JSON）が出ます。人からもらったパッチを貼って「読み込む」も使えます。" spellcheck="false"></textarea>
+  </div>
+
+  <details class="help">
+    <summary>使い方</summary>
+    <ul>
+      <li><b>電源 ON</b> で音が出ます。プリセットを選ぶと、つまみとピンがまとめて変わります。</li>
+      <li><b>マトリクス</b>：行（左）が出どころ、列（上）が行き先です。たとえば「OSC 1 SAW」行 ×「FILTER」列にピンを差すと、オシレーター 1 のノコギリ波がフィルターに入ります。音も制御電圧も同じ扱いなので、OSC 3 を「OSC 1 Hz」列に差せばビブラート、「FILT Hz」列ならワウになります。</li>
+      <li>各モジュールの <b>LEVEL</b> つまみが、その出どころからマトリクスへ出る量です。0 だとピンを差しても何も出ません。</li>
+      <li><b>ENVELOPE（台形）</b>：ATTACK で上がり、ON の間とどまり、DECAY で下がり、OFF の間休んで繰り返します。OFF を 10（∞）にすると繰り返さず、キーボード・TRIGGER・ENV TRIG 列の信号でだけ動きます。ENV IN 列に入れた音が「ENV SIGNAL」行から台形どおりの音量で出ます。</li>
+      <li><b>キーボード</b>：パソコンの Z S X D C V G B H N J M ,（下の段）と Q 2 W 3 E R 5 T 6 Y 7 U I（上の段）。スペースキーは TRIGGER。KBD 行は C4 で 0、1 オクターブで 0.5 の電圧が出ます（OSC・フィルターは 0.5 で 1 オクターブ動きます）。</li>
+      <li>つまみは上下にドラッグ（Shift で細かく）、ホイール、矢印キーで回せます。ダブルクリックで初期値。</li>
+      <li>フィルターの RESPONSE を 10 近くまで上げると自己発振して、それ自体が音源になります。</li>
+    </ul>
+  </details>
+</div>
+
+<script type="text/plain" id="dsp">
+const SR = sampleRate;
+const OCT = 2; // 1.0 of control voltage = 2 octaves
+const NS = 17, ND = 16;
+const P = PARAM_LIST;
+const NP = P.length;
+const IX = {}; P.forEach((k, i) => IX[k] = i);
+const D = { OUT1:0, OUT2:1, RA:2, RB:3, REV:4, FIN:5, ENV:6, O1F:7, O2F:8, O3F:9, DEC:10, RMIX:11, FF:12, L1:13, L2:14, TRIG:15 };
+
+function blep(t, dt) {
+  if (t < dt) { t /= dt; return t + t - t * t - 1; }
+  if (t > 1 - dt) { t = (t - 1) / dt; return t * t + t + t + 1; }
+  return 0;
+}
+class Spring {
+  constructor(ms, n, a) {
+    this.len = Math.max(8, Math.round(SR * ms / 1000));
+    this.buf = new Float32Array(this.len); this.i = 0;
+    this.n = n; this.a = a; this.z = new Float32Array(n); this.lp = 0;
+  }
+  tick(x, fb) {
+    const d = this.buf[this.i];
+    let y = x + d * fb;
+    const a = this.a, z = this.z;
+    for (let k = 0; k < this.n; k++) { const o = a * y + z[k]; z[k] = y - a * o; y = o; }
+    this.lp += 0.4 * (y - this.lp);
+    this.buf[this.i] = this.lp;
+    if (++this.i >= this.len) this.i = 0;
+    return d;
+  }
+}
+class VCS extends AudioWorkletProcessor {
+  constructor() {
+    super();
+    this.tg = new Float32Array(NP); this.c = new Float32Array(NP);
+    this.src = new Float32Array(NS); this.col = new Float32Array(ND);
+    this.ps = new Int32Array(0); this.pd = new Int32Array(0); this.pg = new Float32Array(0);
+    this.ph1 = 0; this.ph2 = 0.3; this.ph3 = 0.6;
+    this.nlp = 0; this.s1 = 0; this.s2 = 0; this.s3 = 0; this.s4 = 0;
+    this.e = 0; this.stage = 0; this.ht = 0; this.gate = false; this.trgHi = false; this.pend = false;
+    this.sp1 = new Spring(33.7, 16, -0.62); this.sp2 = new Spring(41.3, 16, -0.58);
+    this.t1 = 0; this.t2 = 0; this.dcL = 0; this.dcR = 0; this.dxL = 0; this.dxR = 0;
+    this.kbdT = 0; this.kbd = 0; this.stkX = 0; this.stkY = 0;
+    this.first = true; this.cnt = 0;
+    this.port.onmessage = (ev) => {
+      const m = ev.data;
+      if (m.t === 'p') { for (const k in m.v) if (k in IX) this.tg[IX[k]] = m.v[k]; if (this.first) { this.c.set(this.tg); this.first = false; } }
+      else if (m.t === 'pins') { this.ps = Int32Array.from(m.s); this.pd = Int32Array.from(m.d); this.pg = Float32Array.from(m.g); }
+      else if (m.t === 'trig') this.pend = true;
+      else if (m.t === 'gate') this.gate = m.v;
+      else if (m.t === 'kbd') this.kbdT = m.v;
+      else if (m.t === 'stick') { this.stkX = m.x; this.stkY = m.y; }
+    };
+  }
+  process(ins, outs) {
+    const o = outs[0], L = o[0], R = o[1] || o[0], n = L.length;
+    const tg = this.tg, c = this.c, src = this.src, col = this.col;
+    const ps = this.ps, pd = this.pd, pg = this.pg, np = ps.length;
+    const sm = 1 - Math.exp(-1 / (0.012 * SR));
+    const toneK = 1 - Math.exp(-2 * Math.PI * 700 / SR);
+    const dcK = 1 - Math.exp(-2 * Math.PI * 8 / SR);
+    const fmax = SR * 0.45;
+    const I = IX;
+    for (let t = 0; t < n; t++) {
+      for (let j = 0; j < NP; j++) c[j] += (tg[j] - c[j]) * sm;
+      col.fill(0);
+      for (let q = 0; q < np; q++) col[pd[q]] += src[ps[q]] * pg[q];
+
+      // Oscillator 1: shaped sine + saw
+      let f1 = c[I.o1f] * Math.pow(2, col[D.O1F] * OCT); f1 = f1 > fmax ? fmax : (f1 < 0.001 ? 0.001 : f1);
+      const dt1 = f1 / SR; this.ph1 += dt1; if (this.ph1 >= 1) this.ph1 -= Math.floor(this.ph1);
+      let ph = this.ph1, sh = Math.min(0.95, Math.max(0.05, c[I.o1shape]));
+      const w = ph < sh ? 0.5 * ph / sh : 0.5 + 0.5 * (ph - sh) / (1 - sh);
+      const sin1 = Math.sin(2 * Math.PI * w);
+      const saw1 = 2 * ph - 1 - blep(ph, dt1);
+
+      // Oscillator 2: pulse + triangle
+      let f2 = c[I.o2f] * Math.pow(2, col[D.O2F] * OCT); f2 = f2 > fmax ? fmax : (f2 < 0.001 ? 0.001 : f2);
+      const dt2 = f2 / SR; this.ph2 += dt2; if (this.ph2 >= 1) this.ph2 -= Math.floor(this.ph2);
+      ph = this.ph2; sh = Math.min(0.95, Math.max(0.05, c[I.o2shape]));
+      let sq2 = ph < sh ? 1 : -1; sq2 += blep(ph, dt2); sq2 -= blep((ph + 1 - sh) % 1, dt2);
+      const tri2 = ph < sh ? -1 + 2 * ph / sh : 1 - 2 * (ph - sh) / (1 - sh);
+
+      // Oscillator 3 (low range)
+      let f3 = c[I.o3f] * Math.pow(2, col[D.O3F] * OCT); f3 = f3 > fmax ? fmax : (f3 < 0.001 ? 0.001 : f3);
+      const dt3 = f3 / SR; this.ph3 += dt3; if (this.ph3 >= 1) this.ph3 -= Math.floor(this.ph3);
+      ph = this.ph3; sh = Math.min(0.95, Math.max(0.05, c[I.o3shape]));
+      let sq3 = ph < sh ? 1 : -1; sq3 += blep(ph, dt3); sq3 -= blep((ph + 1 - sh) % 1, dt3);
+      const tri3 = ph < sh ? -1 + 2 * ph / sh : 1 - 2 * (ph - sh) / (1 - sh);
+
+      // Noise with colour
+      const wn = Math.random() * 2 - 1;
+      this.nlp += 0.02 * (wn - this.nlp);
+      const nc = c[I.noiseCol];
+      const noise = (nc < 0 ? wn * (1 + nc) + this.nlp * 4 * (-nc) : wn * (1 - nc) + (wn - this.nlp) * nc) * c[I.noiseLvl] / 10;
+
+      // Ring modulator
+      let ring = col[D.RA] * col[D.RB] * c[I.ringLvl] / 10;
+      ring = ring / (1 + Math.abs(ring) * 0.3);
+
+      // Filter: 4-pole ladder, tanh on the summed input, self-oscillates near 10
+      let fc = c[I.filtF] * Math.pow(2, col[D.FF] * OCT); fc = fc < 5 ? 5 : (fc > SR * 0.42 ? SR * 0.42 : fc);
+      const g = Math.tan(Math.PI * fc / SR), G = g / (1 + g);
+      const k = c[I.filtRes] / 10 * 4.3;
+      const G2 = G * G, G3 = G2 * G, G4 = G3 * G;
+      const S = (G3 * this.s1 + G2 * this.s2 + G * this.s3 + this.s4) / (1 + g);
+      let u = (col[D.FIN] + (Math.random() - 0.5) * 1e-4 - k * S) / (1 + k * G4);
+      u = Math.tanh(u);
+      let v = G * (u - this.s1); const y1 = v + this.s1; this.s1 = y1 + v;
+      v = G * (y1 - this.s2); const y2 = v + this.s2; this.s2 = y2 + v;
+      v = G * (y2 - this.s3); const y3 = v + this.s3; this.s3 = y3 + v;
+      v = G * (y3 - this.s4); const y4 = v + this.s4; this.s4 = y4 + v;
+      const filt = y4 * (1 + k * 0.7) * c[I.filtLvl] / 10;
+
+      // Trapezoid envelope
+      const tr = col[D.TRIG];
+      if (tr > 0.3 && !this.trgHi) { this.trgHi = true; this.pend = true; } else if (tr < 0.1) this.trgHi = false;
+      if (this.pend) { this.pend = false; this.stage = 1; }
+      const manual = tg[I.envOff] >= 9.9;
+      const offT = 0.002 * Math.pow(2500, c[I.envOff] / 10);
+      let decT = c[I.envD] * Math.pow(2, -col[D.DEC] * OCT); if (decT < 0.002) decT = 0.002;
+      switch (this.stage) {
+        case 0: if (!manual) { this.stage = 4; this.ht = 0; } break;
+        case 1: this.e += 1 / (Math.max(c[I.envA], 0.0005) * SR); if (this.e >= 1) { this.e = 1; this.stage = 2; this.ht = 0; } break;
+        case 2: this.ht += 1 / SR; if (this.ht >= c[I.envOn] && !this.gate) this.stage = 3; break;
+        case 3: this.e -= 1 / (decT * SR); if (this.e <= 0) { this.e = 0; this.stage = manual ? 0 : 4; this.ht = 0; } break;
+        case 4: this.ht += 1 / SR; if (manual) this.stage = 0; else if (this.ht >= offT) this.stage = 1; break;
+      }
+      const e = this.e;
+      const trap = e * c[I.trapLvl] / 10;
+      const envSig = col[D.ENV] * e * c[I.sigLvl] / 10;
+
+      // Spring reverb
+      const rin = col[D.REV];
+      const wet = (this.sp1.tick(rin * 0.5, 0.72) + this.sp2.tick(rin * 0.5, 0.68)) * 2.2;
+      let mix = c[I.revMix] / 10 + col[D.RMIX] * 0.5; mix = mix < 0 ? 0 : (mix > 1 ? 1 : mix);
+      const rev = (rin * (1 - mix) + wet * mix) * c[I.revLvl] / 10;
+
+      // Output channels (level is voltage-controllable)
+      let a1 = col[D.OUT1] * c[I.out1Lvl] / 10 * Math.max(0, 1 + col[D.L1]);
+      this.t1 += toneK * (a1 - this.t1);
+      const tf1 = c[I.out1Filt]; a1 = tf1 < 0 ? a1 * (1 + tf1) + this.t1 * (-tf1) : a1 * (1 - tf1) + (a1 - this.t1) * tf1;
+      let a2 = col[D.OUT2] * c[I.out2Lvl] / 10 * Math.max(0, 1 + col[D.L2]);
+      this.t2 += toneK * (a2 - this.t2);
+      const tf2 = c[I.out2Filt]; a2 = tf2 < 0 ? a2 * (1 + tf2) + this.t2 * (-tf2) : a2 * (1 - tf2) + (a2 - this.t2) * tf2;
+      const p1 = (c[I.out1Pan] + 1) * Math.PI / 4, p2 = (c[I.out2Pan] + 1) * Math.PI / 4;
+      const m = c[I.master] / 10;
+      let l = (a1 * Math.cos(p1) + a2 * Math.cos(p2)) * m;
+      let r = (a1 * Math.sin(p1) + a2 * Math.sin(p2)) * m;
+      // DC block + soft clip
+      const ol = l - this.dxL + 0.9995 * this.dcL; this.dxL = l; this.dcL = ol;
+      const or = r - this.dxR + 0.9995 * this.dcR; this.dxR = r; this.dcR = or;
+      L[t] = Math.tanh(ol * 0.9); R[t] = Math.tanh(or * 0.9);
+
+      // Keyboard voltage with glide
+      const gl = c[I.kbdGlide];
+      this.kbd += (this.kbdT * c[I.kbdSpread] - this.kbd) * (gl < 0.002 ? 1 : 1 - Math.exp(-1 / (gl * SR)));
+
+      src[0] = a1; src[1] = a2; src[2] = filt; src[3] = trap; src[4] = envSig; src[5] = ring; src[6] = rev; src[7] = noise;
+      src[8] = sin1 * c[I.o1sin] / 10; src[9] = saw1 * c[I.o1saw] / 10;
+      src[10] = sq2 * c[I.o2sqr] / 10; src[11] = tri2 * c[I.o2tri] / 10;
+      src[12] = sq3 * c[I.o3sqr] / 10; src[13] = tri3 * c[I.o3tri] / 10;
+      src[14] = this.stkX * c[I.stkXr] / 10; src[15] = this.stkY * c[I.stkYr] / 10; src[16] = this.kbd;
+    }
+    if ((this.cnt += n) >= 1024) { this.cnt = 0; this.port.postMessage({ e: this.e }); }
+    return true;
+  }
+}
+registerProcessor('vcs3', VCS);
+</script>
+
+<script>
+(() => {
+'use strict';
+// ---------- definitions ----------
+const SRC = [
+  ['out1', 'OUTPUT 1', '--c-out'], ['out2', 'OUTPUT 2', '--c-out'], ['filter', 'FILTER', '--c-filter'],
+  ['trap', 'TRAPEZOID', '--c-env'], ['env', 'ENV SIGNAL', '--c-env'], ['ring', 'RING MOD', '--c-ring'],
+  ['rev', 'REVERB', '--c-rev'], ['noise', 'NOISE', '--c-noise'],
+  ['o1sin', 'OSC 1 SINE', '--c-osc'], ['o1saw', 'OSC 1 SAW', '--c-osc'],
+  ['o2sqr', 'OSC 2 SQUARE', '--c-osc'], ['o2tri', 'OSC 2 TRI', '--c-osc'],
+  ['o3sqr', 'OSC 3 SQUARE', '--c-osc'], ['o3tri', 'OSC 3 TRI', '--c-osc'],
+  ['stkx', 'STICK X', '--c-stick'], ['stky', 'STICK Y', '--c-stick'], ['kbd', 'KBD', '--c-stick']
+];
+const DST = [
+  ['out1', 'OUT 1'], ['out2', 'OUT 2'], ['ringa', 'RING A'], ['ringb', 'RING B'], ['rev', 'REVERB'],
+  ['filter', 'FILTER'], ['env', 'ENV IN'], ['o1f', 'OSC 1 Hz'], ['o2f', 'OSC 2 Hz'], ['o3f', 'OSC 3 Hz'],
+  ['decay', 'DECAY'], ['revmix', 'REV MIX'], ['filtf', 'FILT Hz'], ['out1lvl', 'OUT1 LVL'], ['out2lvl', 'OUT2 LVL'], ['trig', 'ENV TRIG']
+];
+const SI = Object.fromEntries(SRC.map((s, i) => [s[0], i]));
+const DI = Object.fromEntries(DST.map((d, i) => [d[0], i]));
+// the VCS3 matrix had no connection on a few holes in this layout; mark self-feeding output holes as risky
+const fmtHz = v => v < 10 ? v.toFixed(v < 1 ? 3 : 2) + ' Hz' : v < 1000 ? v.toFixed(0) + ' Hz' : (v / 1000).toFixed(2) + ' kHz';
+const fmtS = v => v < 1 ? (v * 1000).toFixed(v < 0.01 ? 1 : 0) + ' ms' : v.toFixed(2) + ' s';
+const fmtL = v => v.toFixed(1);
+const fmtB = v => (v >= 0 ? '+' : '') + v.toFixed(2);
+const fmtOff = v => v >= 9.9 ? '∞ 手動' : fmtS(0.002 * Math.pow(2500, v / 10));
+const K = (id, label, min, max, def, curve, fmt) => ({ id, label, min, max, def, curve, fmt });
+const L10 = (id, label, def = 0) => K(id, label, 0, 10, def, 'lin', fmtL);
+const MODULES = [
+  { title: 'Oscillator 1', note: 'サイン（形を変えられる）とノコギリ', c: '--c-osc', knobs: [
+    K('o1f', 'Frequency', 1, 10000, 261.63, 'log', fmtHz), K('o1shape', 'Shape', 0, 1, 0.5, 'lin', v => v.toFixed(2)),
+    L10('o1sin', 'Sine Level'), L10('o1saw', 'Saw Level')] },
+  { title: 'Oscillator 2', note: '矩形と三角（SHAPE で幅）', c: '--c-osc', knobs: [
+    K('o2f', 'Frequency', 1, 10000, 392, 'log', fmtHz), K('o2shape', 'Shape', 0, 1, 0.5, 'lin', v => v.toFixed(2)),
+    L10('o2sqr', 'Square Level'), L10('o2tri', 'Tri Level')] },
+  { title: 'Oscillator 3', note: '低い周波数（変調用）', c: '--c-osc', knobs: [
+    K('o3f', 'Frequency', 0.025, 500, 2, 'log', fmtHz), K('o3shape', 'Shape', 0, 1, 0.5, 'lin', v => v.toFixed(2)),
+    L10('o3sqr', 'Square Level'), L10('o3tri', 'Tri Level')] },
+  { title: 'Noise', note: '', c: '--c-noise', knobs: [K('noiseCol', 'Colour', -1, 1, 0, 'lin', fmtB), L10('noiseLvl', 'Level')] },
+  { title: 'Ring Modulator', note: 'RING A × RING B', c: '--c-ring', knobs: [L10('ringLvl', 'Level')] },
+  { title: 'Filter / Oscillator', note: '10 近くで自己発振', c: '--c-filter', knobs: [
+    K('filtF', 'Frequency', 5, 10000, 1000, 'log', fmtHz), L10('filtRes', 'Response'), L10('filtLvl', 'Level')] },
+  { title: 'Envelope Shaper', note: '', c: '--c-env', env: true, knobs: [
+    K('envA', 'Attack', 0.001, 1, 0.005, 'log', fmtS), K('envOn', 'On', 0, 2.5, 0.15, 'lin', fmtS),
+    K('envD', 'Decay', 0.003, 15, 0.6, 'log', fmtS), K('envOff', 'Off', 0, 10, 10, 'lin', fmtOff),
+    L10('trapLvl', 'Trapezoid'), L10('sigLvl', 'Signal Level')] },
+  { title: 'Spring Reverb', note: '', c: '--c-rev', knobs: [L10('revMix', 'Mix'), L10('revLvl', 'Level')] },
+  { title: 'Output', note: 'CH1 / CH2', c: '--c-out', wide: true, knobs: [
+    L10('out1Lvl', 'Ch1 Level'), K('out1Filt', 'Ch1 Filter', -1, 1, 0, 'lin', fmtB), K('out1Pan', 'Ch1 Pan', -1, 1, -0.5, 'lin', fmtB),
+    L10('out2Lvl', 'Ch2 Level'), K('out2Filt', 'Ch2 Filter', -1, 1, 0, 'lin', fmtB), K('out2Pan', 'Ch2 Pan', -1, 1, 0.5, 'lin', fmtB)] }
+];
+const EXTRA = {
+  stick: [L10('stkXr', 'X Range', 5), L10('stkYr', 'Y Range', 5)],
+  master: [L10('master', 'Master', 8)],
+  kbd: [K('kbdSpread', 'Spread', 0, 2, 1, 'lin', v => v.toFixed(2)), K('kbdGlide', 'Glide', 0, 1, 0, 'lin', fmtS)]
+};
+const ALLK = [...MODULES.flatMap(m => m.knobs), ...EXTRA.stick, ...EXTRA.master, ...EXTRA.kbd];
+const KDEF = Object.fromEntries(ALLK.map(k => [k.id, k]));
+const PARAM_LIST = ALLK.map(k => k.id);
+
+// ---------- presets ----------
+const W = 'w', Rd = 'r', Gr = 'g';
+const PRESETS = [
+  { name: 'はじめの一音（サイン）', p: { o1sin: 8, sigLvl: 8, out1Lvl: 6, out2Lvl: 6, envA: 0.01, envOn: 0.1, envD: 0.5 },
+    pins: [['kbd', 'o1f', Rd], ['o1sin', 'env', W], ['env', 'out1', W], ['env', 'out2', W]] },
+  { name: 'キーボード・リード', p: { o1saw: 7, o2sqr: 5, o2f: 262.8, o2shape: 0.4, filtF: 500, filtRes: 5.5, filtLvl: 8, trapLvl: 6, sigLvl: 8,
+      envA: 0.008, envOn: 0.25, envD: 0.9, o3f: 5.2, o3tri: 1.5, revMix: 10, revLvl: 4, out1Lvl: 6, out2Lvl: 6 },
+    pins: [['kbd', 'o1f', Rd], ['kbd', 'o2f', Rd], ['kbd', 'filtf', W], ['trap', 'filtf', W], ['o3tri', 'o1f', Gr], ['o1saw', 'filter', W], ['o2sqr', 'filter', W],
+      ['filter', 'env', W], ['env', 'out1', W], ['env', 'out2', W], ['env', 'rev', W], ['rev', 'out1', W], ['rev', 'out2', W]] },
+  { name: 'リング・モジュレーターの鐘', p: { o1sin: 8, o1f: 440, o2tri: 8, o2f: 723, ringLvl: 10, sigLvl: 10, envA: 0.002, envOn: 0, envD: 2.6,
+      revMix: 4, revLvl: 10, out1Lvl: 8, out2Lvl: 8 },
+    pins: [['kbd', 'o1f', Rd], ['kbd', 'o2f', Rd], ['o1sin', 'ringa', W], ['o2tri', 'ringb', W], ['ring', 'env', W], ['env', 'rev', W], ['rev', 'out1', W], ['rev', 'out2', W]] },
+  { name: '小鳥のさえずり', p: { o1sin: 8, o1f: 2100, trapLvl: 7, o3f: 9, o3sqr: 6, sigLvl: 8, envA: 0.02, envOn: 0.04, envD: 0.14, envOff: 6.4,
+      revMix: 5, revLvl: 6, stkXr: 6, out1Lvl: 6, out2Lvl: 6 },
+    pins: [['trap', 'o1f', W], ['o3sqr', 'o1f', Gr], ['stkx', 'o1f', W], ['o1sin', 'env', W], ['env', 'rev', W], ['rev', 'out1', W], ['rev', 'out2', W]] },
+  { name: '波と風', p: { noiseCol: -0.3, noiseLvl: 8, filtF: 420, filtRes: 6.8, filtLvl: 8, o3f: 0.09, o3tri: 9, revMix: 4, revLvl: 8, stkYr: 7, out1Lvl: 6, out2Lvl: 6 },
+    pins: [['noise', 'filter', W], ['o3tri', 'filtf', W], ['stky', 'filtf', W], ['o3tri', 'out2lvl', Gr], ['filter', 'rev', W], ['rev', 'out1', W], ['rev', 'out2', W]] },
+  { name: 'フィルターの発振音', p: { filtF: 261.63, filtRes: 10, filtLvl: 7, sigLvl: 8, o3f: 5.5, o3tri: 2, envA: 0.06, envOn: 0.4, envD: 1.4, revMix: 3, revLvl: 6, out1Lvl: 6, out2Lvl: 6 },
+    pins: [['kbd', 'filtf', Rd], ['o3tri', 'filtf', Gr], ['filter', 'env', W], ['env', 'rev', W], ['rev', 'out1', W], ['rev', 'out2', W]] },
+  { name: '脈打つドローン', p: { o1saw: 6, o1f: 55, o2sqr: 6, o2f: 82.6, o2shape: 0.3, o3f: 4, o3sqr: 8, o3tri: 3, filtF: 700, filtRes: 6, filtLvl: 8,
+      trapLvl: 5, sigLvl: 8, envA: 0.003, envOn: 0.02, envD: 0.22, revMix: 4, revLvl: 6, out1Lvl: 6, out2Lvl: 6 },
+    pins: [['o1saw', 'filter', W], ['o2sqr', 'filter', W], ['o3sqr', 'trig', W], ['trap', 'filtf', W], ['o3tri', 'o2f', Gr], ['filter', 'env', W], ['env', 'rev', W], ['rev', 'out1', W], ['rev', 'out2', W]] },
+  { name: 'クロス変調のカオス', p: { o1sin: 6, o1f: 180, o2sqr: 5, o2tri: 7, o2f: 97, o3f: 3, o3sqr: 6, ringLvl: 8, filtF: 1500, filtRes: 7, filtLvl: 7,
+      stkXr: 8, stkYr: 8, revMix: 5, revLvl: 6, out1Lvl: 5, out2Lvl: 5 },
+    pins: [['o1sin', 'o2f', W], ['o2sqr', 'o1f', W], ['o2tri', 'ringa', W], ['o3sqr', 'ringb', W], ['ring', 'filter', W], ['stkx', 'filtf', W], ['stky', 'o1f', W],
+      ['filter', 'rev', W], ['rev', 'out1', W], ['rev', 'out2', W]] }
+];
+
+// ---------- state ----------
+const state = { p: {}, pins: new Map() }; // pins: "s,d" -> 'w'|'r'|'g'
+ALLK.forEach(k => state.p[k.id] = k.def);
+// fixed per-hole tolerance of white pins (±2%), seeded so it is the same every visit
+const tol = [];
+{ let x = 20240917; for (let i = 0; i < SRC.length * DST.length; i++) { x = (x * 1103515245 + 12345) & 0x7fffffff; tol.push(((x / 0x7fffffff) * 2 - 1) * 0.02); } }
+const pinGain = (s, d, c) => c === 'r' ? 1 : c === 'g' ? 0.25 : 1 + tol[s * DST.length + d];
+
+let ctx = null, node = null, analyser = null;
+const $ = id => document.getElementById(id);
+const status = msg => { $('status').textContent = msg; };
+const send = m => { if (node) node.port.postMessage(m); };
+const sendParams = obj => send({ t: 'p', v: obj });
+const sendPins = () => {
+  const s = [], d = [], g = [];
+  for (const [key, c] of state.pins) { const [a, b] = key.split(',').map(Number); s.push(a); d.push(b); g.push(pinGain(a, b, c)); }
+  send({ t: 'pins', s, d, g });
+};
+
+// ---------- knobs ----------
+const knobEls = {};
+const toNorm = (k, v) => k.curve === 'log' ? Math.log(v / k.min) / Math.log(k.max / k.min) : (v - k.min) / (k.max - k.min);
+const fromNorm = (k, n) => { n = Math.min(1, Math.max(0, n)); return k.curve === 'log' ? k.min * Math.pow(k.max / k.min, n) : k.min + (k.max - k.min) * n; };
+const SVGNS = 'http://www.w3.org/2000/svg';
+function makeKnob(k, color) {
+  const el = document.createElement('div');
+  el.className = 'knob'; el.tabIndex = 0; el.setAttribute('role', 'slider');
+  el.setAttribute('aria-label', k.label); el.style.setProperty('--kc', `var(${color})`);
+  const svg = document.createElementNS(SVGNS, 'svg'); svg.setAttribute('viewBox', '0 0 60 60');
+  for (let i = 0; i <= 10; i++) {
+    const a = (-135 + i * 27) * Math.PI / 180;
+    const tick = document.createElementNS(SVGNS, 'line');
+    tick.setAttribute('x1', 30 + Math.sin(a) * 22); tick.setAttribute('y1', 30 - Math.cos(a) * 22);
+    tick.setAttribute('x2', 30 + Math.sin(a) * 25); tick.setAttribute('y2', 30 - Math.cos(a) * 25);
+    tick.setAttribute('class', 'tick'); svg.appendChild(tick);
+    if (i % 5 === 0) {
+      const tx = document.createElementNS(SVGNS, 'text');
+      tx.setAttribute('x', 30 + Math.sin(a) * 28.5); tx.setAttribute('y', 30 - Math.cos(a) * 28.5 + (i === 5 ? 1 : 0));
+      tx.setAttribute('class', 'num'); tx.textContent = i; svg.appendChild(tx);
+    }
+  }
+  const skirt = document.createElementNS(SVGNS, 'circle'); skirt.setAttribute('cx', 30); skirt.setAttribute('cy', 30); skirt.setAttribute('r', 19); skirt.setAttribute('class', 'skirt');
+  const ring = document.createElementNS(SVGNS, 'circle'); ring.setAttribute('cx', 30); ring.setAttribute('cy', 30); ring.setAttribute('r', 17.5); ring.setAttribute('class', 'ring');
+  const rot = document.createElementNS(SVGNS, 'g');
+  const cap = document.createElementNS(SVGNS, 'circle'); cap.setAttribute('cx', 30); cap.setAttribute('cy', 30); cap.setAttribute('r', 12); cap.setAttribute('class', 'cap');
+  const ind = document.createElementNS(SVGNS, 'line'); ind.setAttribute('x1', 30); ind.setAttribute('y1', 27); ind.setAttribute('x2', 30); ind.setAttribute('y2', 13); ind.setAttribute('class', 'ind');
+  rot.append(cap, ind); svg.append(skirt, ring, rot);
+  const lab = document.createElement('label'); lab.textContent = k.label;
+  const out = document.createElement('output');
+  el.append(svg, lab, out);
+  const render = () => {
+    const v = state.p[k.id], n = toNorm(k, v);
+    rot.setAttribute('transform', `rotate(${-135 + n * 270} 30 30)`);
+    out.textContent = k.fmt(v);
+    el.setAttribute('aria-valuetext', k.fmt(v)); el.setAttribute('aria-valuenow', (n * 10).toFixed(1));
+  };
+  const set = (v, quiet) => { state.p[k.id] = v; render(); if (!quiet) sendParams({ [k.id]: v }); };
+  let drag = null;
+  el.addEventListener('pointerdown', e => { el.setPointerCapture(e.pointerId); drag = { y: e.clientY, n: toNorm(k, state.p[k.id]) }; el.focus(); e.preventDefault(); });
+  el.addEventListener('pointermove', e => { if (!drag) return; const dy = drag.y - e.clientY; set(fromNorm(k, drag.n + dy / (e.shiftKey ? 900 : 180))); });
+  const end = () => { drag = null; };
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+  el.addEventListener('dblclick', () => set(k.def));
+  el.addEventListener('wheel', e => { e.preventDefault(); set(fromNorm(k, toNorm(k, state.p[k.id]) - Math.sign(e.deltaY) * (e.shiftKey ? 0.004 : 0.02))); }, { passive: false });
+  el.addEventListener('keydown', e => {
+    const step = e.shiftKey ? 0.005 : 0.025;
+    if (e.key === 'ArrowUp' || e.key === 'ArrowRight') { set(fromNorm(k, toNorm(k, state.p[k.id]) + step)); e.preventDefault(); e.stopPropagation(); }
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') { set(fromNorm(k, toNorm(k, state.p[k.id]) - step)); e.preventDefault(); e.stopPropagation(); }
+  });
+  knobEls[k.id] = { render };
+  render();
+  return el;
+}
+
+// ---------- build modules ----------
+const modBox = $('modules');
+let envLed = null;
+for (const m of MODULES) {
+  const sec = document.createElement('div'); sec.className = 'mod' + (m.wide ? ' wide' : '');
+  sec.style.setProperty('--mc', `var(${m.c})`);
+  const h = document.createElement('h2'); h.textContent = m.title;
+  const sp = document.createElement('span'); sp.textContent = m.note; h.appendChild(sp);
+  if (m.env) { envLed = document.createElement('i'); envLed.className = 'led'; envLed.title = '台形の今の高さ'; sp.prepend(envLed, ' '); }
+  const ks = document.createElement('div'); ks.className = 'knobs';
+  m.knobs.forEach(k => ks.appendChild(makeKnob(k, m.c)));
+  sec.append(h, ks);
+  if (m.env) {
+    const tr = document.createElement('div'); tr.className = 'trigrow';
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = 'Trigger（押す間 ON が続く）'; b.id = 'trigBtn';
+    b.addEventListener('pointerdown', e => { b.setPointerCapture(e.pointerId); gateOn(); });
+    b.addEventListener('pointerup', gateOff); b.addEventListener('pointercancel', gateOff);
+    tr.appendChild(b); sec.appendChild(tr);
+  }
+  modBox.appendChild(sec);
+}
+EXTRA.stick.forEach(k => $('stickKnobs').appendChild(makeKnob(k, '--c-stick')));
+EXTRA.master.forEach(k => $('masterKnobs').appendChild(makeKnob(k, '--c-out')));
+EXTRA.kbd.forEach(k => $('kbdKnobs').appendChild(makeKnob(k, '--c-osc')));
+
+// ---------- matrix ----------
+const mx = $('matrix');
+let brush = 'w';
+const colHeads = [], rowHeads = [], cells = {};
+const corner = document.createElement('div'); corner.className = 'mh'; mx.appendChild(corner);
+DST.forEach((d, j) => { const h = document.createElement('div'); h.className = 'mh colh'; h.innerHTML = `<span><b>${String.fromCharCode(65 + j)}</b> ${d[1]}</span>`; mx.appendChild(h); colHeads.push(h); });
+SRC.forEach((s, i) => {
+  const rh = document.createElement('div'); rh.className = 'mh rowh'; rh.style.setProperty('--rc', `var(${s[2]})`);
+  rh.innerHTML = `<i></i><span><b>${i + 1}</b> ${s[1]}</span>`; mx.appendChild(rh); rowHeads.push(rh);
+  DST.forEach((d, j) => {
+    const c = document.createElement('button'); c.type = 'button'; c.className = 'cell';
+    if ((s[0] === 'out1' && d[0] === 'out1') || (s[0] === 'out2' && d[0] === 'out2')) c.classList.add('x');
+    c.setAttribute('aria-label', `${s[1]} → ${d[1]}`); c.title = `${s[1]} → ${d[1]}`;
+    c.addEventListener('click', () => togglePin(i, j));
+    c.addEventListener('mouseenter', () => { rowHeads[i].classList.add('hl'); colHeads[j].classList.add('hl'); });
+    c.addEventListener('mouseleave', () => { rowHeads[i].classList.remove('hl'); colHeads[j].classList.remove('hl'); });
+    cells[i + ',' + j] = c; mx.appendChild(c);
+  });
+});
+function renderPins() {
+  for (const key in cells) { const c = state.pins.get(key); if (c) cells[key].dataset.pin = c; else delete cells[key].dataset.pin; }
+}
+function togglePin(i, j) {
+  const key = i + ',' + j, cur = state.pins.get(key);
+  if (cur === brush) state.pins.delete(key); else state.pins.set(key, brush);
+  renderPins(); sendPins();
+}
+document.querySelectorAll('[data-brush]').forEach(b => b.addEventListener('click', () => {
+  brush = b.dataset.brush;
+  document.querySelectorAll('[data-brush]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+}));
+$('clearPins').addEventListener('click', () => { state.pins.clear(); renderPins(); sendPins(); status('ピンをすべて抜きました。'); });
+
+// ---------- joystick ----------
+const stick = $('stick'), stickTop = $('stickTop');
+const stk = { x: 0, y: 0 };
+function renderStick() {
+  stickTop.style.left = ((stk.x + 1) / 2 * 100) + '%'; stickTop.style.top = ((1 - stk.y) / 2 * 100) + '%';
+  $('stickVals').textContent = `X ${fmtB(stk.x)} · Y ${fmtB(stk.y)}`;
+  send({ t: 'stick', x: stk.x, y: stk.y });
+}
+const stickFrom = e => { const r = stick.getBoundingClientRect(); stk.x = Math.max(-1, Math.min(1, ((e.clientX - r.left) / r.width) * 2 - 1)); stk.y = Math.max(-1, Math.min(1, 1 - ((e.clientY - r.top) / r.height) * 2)); renderStick(); };
+let stickDrag = false;
+stick.addEventListener('pointerdown', e => { stickDrag = true; stick.setPointerCapture(e.pointerId); stickFrom(e); });
+stick.addEventListener('pointermove', e => { if (stickDrag) stickFrom(e); });
+stick.addEventListener('pointerup', () => { stickDrag = false; });
+stick.addEventListener('pointercancel', () => { stickDrag = false; });
+stick.addEventListener('dblclick', () => { stk.x = 0; stk.y = 0; renderStick(); });
+stick.addEventListener('keydown', e => {
+  const st = 0.05, map = { ArrowLeft: [-st, 0], ArrowRight: [st, 0], ArrowUp: [0, st], ArrowDown: [0, -st] };
+  if (map[e.key]) { stk.x = Math.max(-1, Math.min(1, stk.x + map[e.key][0])); stk.y = Math.max(-1, Math.min(1, stk.y + map[e.key][1])); renderStick(); e.preventDefault(); e.stopPropagation(); }
+});
+renderStick();
+
+// ---------- keyboard ----------
+let octave = 0; // 0 => C3..C5
+const keysEl = $('keys');
+const LOWER = ['z', 's', 'x', 'd', 'c', 'v', 'g', 'b', 'h', 'n', 'j', 'm', ','];
+const UPPER = ['q', '2', 'w', '3', 'e', 'r', '5', 't', '6', 'y', '7', 'u', 'i'];
+const KEYMAP = {}; LOWER.forEach((k, i) => KEYMAP[k] = i); UPPER.forEach((k, i) => KEYMAP[k] = 12 + i);
+const NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const keyEls = [];
+const held = [];
+let gateHeld = false;
+function buildKeys() {
+  keysEl.innerHTML = ''; keyEls.length = 0;
+  let wx = 0;
+  for (let i = 0; i <= 24; i++) {
+    const pc = i % 12, black = [1, 3, 6, 8, 10].includes(pc);
+    const el = document.createElement('div');
+    el.className = black ? 'bk' : 'wk';
+    const label = (LOWER[i] ?? '') || '';
+    const label2 = i >= 12 ? UPPER[i - 12] : '';
+    el.textContent = i < 13 ? label.toUpperCase() : (label2 || '').toUpperCase();
+    if (!black && pc === 0) el.title = 'C' + (3 + octave + Math.floor(i / 12));
+    if (black) { el.style.left = (wx * 38 - 12) + 'px'; } else wx++;
+    el.addEventListener('pointerdown', e => { e.preventDefault(); keysEl.setPointerCapture?.(e.pointerId); noteOn(i, 'p'); curPtrKey = i; });
+    el.addEventListener('pointerenter', e => { if (e.buttons && curPtrKey !== null && curPtrKey !== i) { noteOff(curPtrKey, 'p'); noteOn(i, 'p'); curPtrKey = i; } });
+    keysEl.appendChild(el); keyEls[i] = el;
+  }
+  $('octLabel').textContent = `C${3 + octave}–C${5 + octave}`;
+}
+let curPtrKey = null;
+window.addEventListener('pointerup', () => { if (curPtrKey !== null) { noteOff(curPtrKey, 'p'); curPtrKey = null; } });
+const midiOf = i => 48 + octave * 12 + i;
+function noteOn(i, src) {
+  const id = src + i; if (held.some(h => h.id === id)) return;
+  held.push({ id, i }); keyEls[i]?.classList.add('down');
+  send({ t: 'kbd', v: (midiOf(i) - 60) / 24 });
+  gateOn();
+}
+function noteOff(i, src) {
+  const id = src + i, ix = held.findIndex(h => h.id === id); if (ix < 0) return;
+  held.splice(ix, 1);
+  if (!held.some(h => h.i === i)) keyEls[i]?.classList.remove('down');
+  if (held.length) send({ t: 'kbd', v: (midiOf(held[held.length - 1].i) - 60) / 24 });
+  else gateOff();
+}
+function gateOn() { send({ t: 'gate', v: true }); send({ t: 'trig' }); gateHeld = true; }
+function gateOff() { if (held.length) return; send({ t: 'gate', v: false }); gateHeld = false; }
+$('octDown').addEventListener('click', () => { if (octave > -2) { octave--; buildKeys(); } });
+$('octUp').addEventListener('click', () => { if (octave < 2) { octave++; buildKeys(); } });
+const typing = () => { const a = document.activeElement; return a && (a.tagName === 'TEXTAREA' || a.tagName === 'SELECT' || a.tagName === 'INPUT'); };
+window.addEventListener('keydown', e => {
+  if (typing() || e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  if (k === ' ') { e.preventDefault(); if (!e.repeat) { held.push({ id: 'space', i: -1 }); gateOn(); } return; }
+  if (k in KEYMAP) { e.preventDefault(); if (!e.repeat) noteOn(KEYMAP[k], 'k'); }
+});
+window.addEventListener('keyup', e => {
+  const k = e.key.toLowerCase();
+  if (k === ' ') { const ix = held.findIndex(h => h.id === 'space'); if (ix >= 0) held.splice(ix, 1); gateOff(); return; }
+  if (k in KEYMAP) noteOff(KEYMAP[k], 'k');
+});
+window.addEventListener('blur', () => { held.length = 0; keyEls.forEach(el => el.classList.remove('down')); gateOff(); });
+buildKeys();
+
+// ---------- presets & patches ----------
+const sel = $('preset');
+PRESETS.forEach((p, i) => { const o = document.createElement('option'); o.value = i; o.textContent = p.name; sel.appendChild(o); });
+function applyPatch(patch) {
+  ALLK.forEach(k => state.p[k.id] = k.def);
+  for (const id in (patch.p || {})) if (id in KDEF) state.p[id] = +patch.p[id];
+  state.pins.clear();
+  for (const [s, d, c] of (patch.pins || [])) {
+    const si = typeof s === 'number' ? s : SI[s], di = typeof d === 'number' ? d : DI[d];
+    if (si === undefined || di === undefined || !['w', 'r', 'g'].includes(c)) continue;
+    state.pins.set(si + ',' + di, c);
+  }
+  Object.values(knobEls).forEach(k => k.render());
+  renderPins(); sendParams(state.p); sendPins();
+}
+function currentPatch() {
+  const p = {}; ALLK.forEach(k => { if (Math.abs(state.p[k.id] - k.def) > 1e-9) p[k.id] = +state.p[k.id].toPrecision(5); });
+  const pins = [...state.pins].map(([key, c]) => { const [s, d] = key.split(',').map(Number); return [SRC[s][0], DST[d][0], c]; });
+  return { p, pins };
+}
+sel.addEventListener('change', () => { applyPatch(PRESETS[+sel.value]); status(`プリセット「${PRESETS[+sel.value].name}」`); sel.blur(); });
+$('copyPatch').addEventListener('click', () => {
+  const txt = JSON.stringify(currentPatch());
+  $('patchText').value = txt;
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(txt).then(() => status('パッチをクリップボードにコピーしました。'), () => { $('patchText').select(); status('下の欄のパッチを選択しました。コピーしてください。'); });
+  else { $('patchText').select(); status('下の欄のパッチを選択しました。コピーしてください。'); }
+});
+$('loadPatch').addEventListener('click', () => {
+  try { applyPatch(JSON.parse($('patchText').value)); status('パッチを読み込みました。'); }
+  catch (e) { status('読み込めませんでした。{"p":{…},"pins":[…]} の形の JSON を貼ってください。'); }
+});
+$('savePatch').addEventListener('click', () => {
+  try { localStorage.setItem('vcs3.patch', JSON.stringify(currentPatch())); status('このブラウザに保存しました。'); }
+  catch (e) { status('このブラウザでは保存できません。「パッチをコピー」で控えてください。'); }
+});
+$('restorePatch').addEventListener('click', () => {
+  let t = null; try { t = localStorage.getItem('vcs3.patch'); } catch (e) {}
+  if (!t) { status('保存したパッチがありません。'); return; }
+  try { applyPatch(JSON.parse(t)); status('保存したパッチを呼び出しました。'); } catch (e) { status('保存したパッチが壊れています。'); }
+});
+applyPatch(PRESETS[0]);
+
+// ---------- audio ----------
+$('power').addEventListener('click', async () => {
+  const btn = $('power');
+  if (ctx && ctx.state === 'running') { await ctx.suspend(); btn.textContent = '電源 ON'; btn.classList.remove('on'); status('電源を切りました。'); return; }
+  if (ctx) { await ctx.resume(); btn.textContent = '電源 OFF'; btn.classList.add('on'); status('音が出ます。'); return; }
+  try {
+    ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+    const code = $('dsp').textContent.replace('PARAM_LIST', JSON.stringify(PARAM_LIST));
+    try { await ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([code], { type: 'application/javascript' }))); }
+    catch (e) { await ctx.audioWorklet.addModule('data:application/javascript;charset=utf-8,' + encodeURIComponent(code)); }
+    node = new AudioWorkletNode(ctx, 'vcs3', { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2] });
+    analyser = ctx.createAnalyser(); analyser.fftSize = 2048;
+    node.connect(analyser); analyser.connect(ctx.destination);
+    node.port.onmessage = ev => { if (envLed) envLed.style.opacity = 0.12 + 0.88 * ev.data.e; };
+    sendParams(state.p); sendPins(); send({ t: 'stick', x: stk.x, y: stk.y });
+    await ctx.resume();
+    btn.textContent = '電源 OFF'; btn.classList.add('on');
+    status(`音が出ます（${ctx.sampleRate} Hz）。キーボードは Z〜M と Q〜U、スペースで TRIGGER。`);
+    drawScope();
+  } catch (e) {
+    status('音を出せませんでした: ' + e.message + '（新しめの Chrome / Safari / Firefox でお試しください）');
+    ctx = null; node = null;
+  }
+});
+
+// ---------- scope ----------
+const cv = $('scope'), g2 = cv.getContext('2d');
+let buf = null;
+function drawScope() {
+  requestAnimationFrame(drawScope);
+  if (!analyser) return;
+  const W2 = cv.width, H = cv.height;
+  if (!buf) buf = new Float32Array(analyser.fftSize);
+  analyser.getFloatTimeDomainData(buf);
+  let start = 0;
+  for (let i = 1; i < buf.length / 2; i++) if (buf[i - 1] <= 0 && buf[i] > 0) { start = i; break; }
+  g2.fillStyle = '#0d140f'; g2.fillRect(0, 0, W2, H);
+  g2.strokeStyle = '#1f3524'; g2.lineWidth = 1;
+  for (let i = 1; i < 8; i++) { g2.beginPath(); g2.moveTo(i * W2 / 8, 0); g2.lineTo(i * W2 / 8, H); g2.stroke(); }
+  for (let i = 1; i < 4; i++) { g2.beginPath(); g2.moveTo(0, i * H / 4); g2.lineTo(W2, i * H / 4); g2.stroke(); }
+  g2.strokeStyle = '#7dffa0'; g2.lineWidth = 2; g2.beginPath();
+  const span = buf.length / 2;
+  for (let i = 0; i < span; i++) { const x = i / span * W2, y = H / 2 - buf[start + i] * H * 0.45; i ? g2.lineTo(x, y) : g2.moveTo(x, y); }
+  g2.stroke();
+}
+})();
+</script>
+</body>
+</html>
