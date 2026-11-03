@@ -230,6 +230,7 @@ details.help b { color: var(--ink); }
       <li><b>ENVELOPE（台形）</b>：ATTACK で上がり、ON の間とどまり、DECAY で下がり、OFF の間休んで繰り返します。OFF を 10（∞）にすると繰り返さず、キーボード・TRIGGER・ENV TRIG 列の信号でだけ動きます。ENV IN 列に入れた音が「ENV SIGNAL」行から台形どおりの音量で出ます。</li>
       <li><b>キーボード</b>：パソコンの Z S X D C V G B H N J M ,（下の段）と Q 2 W 3 E R 5 T 6 Y 7 U I（上の段）。スペースキーは TRIGGER。KBD 行は C4 で 0、1 オクターブで 0.5 の電圧が出ます（OSC・フィルターは 0.5 で 1 オクターブ動きます）。</li>
       <li>つまみは上下にドラッグ（Shift で細かく）、ホイール、矢印キーで回せます。ダブルクリックで初期値。</li>
+      <li><b>ANALOG</b>（スコープの下）：実機の癖の量です。オシレーターの音程がゆっくりふらつく、電源を入れてから 1〜2 分は音程がずれていて落ち着いていく、高い音ほど音程が少し下がる、リングモジュレーターに入力が少し漏れる。0 にすると理想的な動きになります。</li>
       <li>フィルターの RESPONSE を 9 あたりより上げると自己発振して、それ自体が音源になります。</li>
     </ul>
   </details>
@@ -338,6 +339,8 @@ class VCS extends AudioWorkletProcessor {
     this.t1 = 0; this.t2 = 0; this.dcL = 0; this.dcR = 0; this.dxL = 0; this.dxR = 0;
     this.kbdT = 0; this.kbd = 0; this.stkX = 0; this.stkY = 0;
     this.first = true; this.cnt = 0;
+    // analog behaviour: slow pitch wander per oscillator and a warm-up offset that settles after power-on
+    this.age = 0; this.dr = [0, 0, 0]; this.warm = [0, 1, 2].map(() => Math.random() * 2 - 1); this.pm = [1, 1, 1];
     this.port.onmessage = (ev) => {
       const m = ev.data;
       if (m.t === 'p') { for (const k in m.v) if (k in IX) this.tg[IX[k]] = m.v[k]; if (this.first) { this.c.set(this.tg); this.first = false; } }
@@ -356,6 +359,14 @@ class VCS extends AudioWorkletProcessor {
     const toneK = 1 - Math.exp(-2 * Math.PI * 700 / SR);
     const dcK = 1 - Math.exp(-2 * Math.PI * 8 / SR);
     const fmax = SR * 0.45;
+    const an = tg[IX.analog] / 10;
+    this.age += n / SR;
+    const wf = Math.exp(-this.age / 90);
+    for (let i = 0; i < 3; i++) {
+      this.dr[i] += (Math.random() * 2 - 1) * 0.055 - this.dr[i] * 0.0005;
+      this.pm[i] = Math.pow(2, an * (0.012 * this.dr[i] + 0.04 * this.warm[i] * wf));
+    }
+    const hf = an / 200000, pm = this.pm;
     const I = IX;
     for (let t = 0; t < n; t++) {
       for (let j = 0; j < NP; j++) c[j] += (tg[j] - c[j]) * sm;
@@ -363,7 +374,7 @@ class VCS extends AudioWorkletProcessor {
       for (let q = 0; q < np; q++) col[pd[q]] += src[ps[q]] * pg[q];
 
       // Oscillator 1: shaped sine + saw
-      let f1 = c[I.o1f] * Math.pow(2, col[D.O1F] * OCT); f1 = f1 > fmax ? fmax : (f1 < 0.001 ? 0.001 : f1);
+      let f1 = c[I.o1f] * pm[0] * Math.pow(2, col[D.O1F] * OCT); f1 /= 1 + f1 * hf; f1 = f1 > fmax ? fmax : (f1 < 0.001 ? 0.001 : f1);
       const dt1 = f1 / SR; this.ph1 += dt1; if (this.ph1 >= 1) this.ph1 -= Math.floor(this.ph1);
       let ph = this.ph1, sh = Math.min(0.95, Math.max(0.05, c[I.o1shape]));
       const w = ph < sh ? 0.5 * ph / sh : 0.5 + 0.5 * (ph - sh) / (1 - sh);
@@ -371,14 +382,14 @@ class VCS extends AudioWorkletProcessor {
       const saw1 = 2 * ph - 1 - blep(ph, dt1);
 
       // Oscillator 2: pulse + triangle
-      let f2 = c[I.o2f] * Math.pow(2, col[D.O2F] * OCT); f2 = f2 > fmax ? fmax : (f2 < 0.001 ? 0.001 : f2);
+      let f2 = c[I.o2f] * pm[1] * Math.pow(2, col[D.O2F] * OCT); f2 /= 1 + f2 * hf; f2 = f2 > fmax ? fmax : (f2 < 0.001 ? 0.001 : f2);
       const dt2 = f2 / SR; this.ph2 += dt2; if (this.ph2 >= 1) this.ph2 -= Math.floor(this.ph2);
       ph = this.ph2; sh = Math.min(0.95, Math.max(0.05, c[I.o2shape]));
       let sq2 = ph < sh ? 1 : -1; sq2 += blep(ph, dt2); sq2 -= blep((ph + 1 - sh) % 1, dt2);
       const tri2 = ph < sh ? -1 + 2 * ph / sh : 1 - 2 * (ph - sh) / (1 - sh);
 
       // Oscillator 3 (low range)
-      let f3 = c[I.o3f] * Math.pow(2, col[D.O3F] * OCT); f3 = f3 > fmax ? fmax : (f3 < 0.001 ? 0.001 : f3);
+      let f3 = c[I.o3f] * pm[2] * Math.pow(2, col[D.O3F] * OCT); f3 /= 1 + f3 * hf; f3 = f3 > fmax ? fmax : (f3 < 0.001 ? 0.001 : f3);
       const dt3 = f3 / SR; this.ph3 += dt3; if (this.ph3 >= 1) this.ph3 -= Math.floor(this.ph3);
       ph = this.ph3; sh = Math.min(0.95, Math.max(0.05, c[I.o3shape]));
       let sq3 = ph < sh ? 1 : -1; sq3 += blep(ph, dt3); sq3 -= blep((ph + 1 - sh) % 1, dt3);
@@ -392,6 +403,7 @@ class VCS extends AudioWorkletProcessor {
 
       // Ring modulator
       let ring = col[D.RA] * col[D.RB] * c[I.ringLvl] / 10;
+      ring += an * 0.015 * (col[D.RA] + col[D.RB]) * c[I.ringLvl] / 10; // carrier leakage
       ring = ring / (1 + Math.abs(ring) * 0.3);
 
       // Filter: VCS3 diode ladder. FREQUENCY is the resonant (self-oscillation) frequency;
@@ -509,7 +521,7 @@ const MODULES = [
 ];
 const EXTRA = {
   stick: [L10('stkXr', 'X Range', 5), L10('stkYr', 'Y Range', 5)],
-  master: [L10('master', 'Master', 8)],
+  master: [L10('master', 'Master', 8), L10('analog', 'Analog', 3)],
   kbd: [K('kbdSpread', 'Spread', 0, 2, 1, 'lin', v => v.toFixed(2)), K('kbdGlide', 'Glide', 0, 1, 0, 'lin', fmtS)]
 };
 const ALLK = [...MODULES.flatMap(m => m.knobs), ...EXTRA.stick, ...EXTRA.master, ...EXTRA.kbd];
