@@ -25,9 +25,9 @@ cmake --build build --config Release
 - Windows: install the `Microsoft.Web.WebView2` NuGet package first (see the workflow).
 - Linux: needs `libwebkit2gtk-4.1-dev`, `libgtk-3-dev`, `libasound2-dev` and the usual X11/freetype headers.
 
-`.github/workflows/vcs3-plugin.yml` builds macOS (VST3, AU, Standalone; ad-hoc signed, AU checked
-with `auval`) and Windows (VST3, Standalone) on each push that touches `vcs3-plugin/` or
-`vcs3-advanced/`, and attaches zip files to the run. `INSTALL.txt` goes into each zip.
+`.github/workflows/vcs3-build.yml` builds macOS (VST3, AU, Standalone; ad-hoc signed, AU checked with
+`auval`) and Windows (VST3, Standalone) together with the desktop app, and puts them in one folder.
+`INSTALL.txt` goes into each plugin zip.
 
 ## Licensing
 

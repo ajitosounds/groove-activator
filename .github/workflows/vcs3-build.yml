@@ -1,0 +1,143 @@
+# Builds everything for VCS3 Pin Matrix and puts it in one folder:
+#   VCS3 Pin Matrix/
+#     はじめにお読みください.txt
+#     Mac/      app installer (.dmg) and plugin zip (VST3, AU, Standalone)
+#     Windows/  app installer (.exe) and plugin zip (VST3, Standalone)
+# The folder is attached to the run as the artifact "VCS3-Pin-Matrix", and uploaded to Dropbox
+# ("/VCS3 Pin Matrix") when the DROPBOX_APP_KEY, DROPBOX_APP_SECRET and DROPBOX_REFRESH_TOKEN secrets are set.
+name: VCS3 build
+
+on:
+  push:
+    paths:
+      - 'vcs3/**'
+      - 'vcs3-advanced/**'
+      - 'vcs3-app/**'
+      - 'vcs3-plugin/**'
+      - '.github/workflows/vcs3-build.yml'
+      - '.github/scripts/dropbox_upload.py'
+  workflow_dispatch:
+
+jobs:
+  app:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            script: dist:mac
+            files: vcs3-app/dist/*.dmg
+            name: app-mac
+          - os: windows-latest
+            script: dist:win
+            files: vcs3-app/dist/*.exe
+            name: app-windows
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: vcs3-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run ${{ matrix.script }}
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: ${{ matrix.files }}
+          if-no-files-found: error
+
+  plugin-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S vcs3-plugin -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+      - name: Build
+        run: cmake --build build --config Release --parallel 4
+      - name: Sign (ad-hoc), check the AU, package
+        run: |
+          A="build/VCS3PinMatrix_artefacts/Release"
+          for f in "$A/VST3/VCS3 Pin Matrix.vst3" "$A/AU/VCS3 Pin Matrix.component" "$A/Standalone/VCS3 Pin Matrix.app"; do
+            codesign --force --deep --sign - "$f"
+          done
+          mkdir -p ~/Library/Audio/Plug-Ins/Components
+          cp -R "$A/AU/VCS3 Pin Matrix.component" ~/Library/Audio/Plug-Ins/Components/
+          killall -9 AudioComponentRegistrar 2>/dev/null || true
+          auval -v aumu V3pm Gacl
+          mkdir out
+          cp -R "$A/VST3/VCS3 Pin Matrix.vst3" "$A/AU/VCS3 Pin Matrix.component" "$A/Standalone/VCS3 Pin Matrix.app" out/
+          cp vcs3-plugin/INSTALL.txt out/
+          (cd out && zip -qry ../VCS3-Pin-Matrix-Plugin-macOS.zip .)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: plugin-mac
+          path: VCS3-Pin-Matrix-Plugin-macOS.zip
+          if-no-files-found: error
+
+  plugin-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: WebView2 SDK (for the panel)
+        shell: pwsh
+        run: |
+          Register-PackageSource -ProviderName NuGet -Name nugetRepository -Location https://www.nuget.org/api/v2 -Force
+          Install-Package Microsoft.Web.WebView2 -Scope CurrentUser -RequiredVersion 1.0.1901.177 -Source nugetRepository -Force
+      - name: Configure
+        run: cmake -S vcs3-plugin -B build -A x64
+      - name: Build
+        run: cmake --build build --config Release --parallel 4
+      - name: Package
+        shell: pwsh
+        run: |
+          $A = "build/VCS3PinMatrix_artefacts/Release"
+          New-Item -ItemType Directory out | Out-Null
+          Copy-Item -Recurse "$A/VST3/VCS3 Pin Matrix.vst3" out/
+          Copy-Item "$A/Standalone/VCS3 Pin Matrix.exe" out/
+          Copy-Item vcs3-plugin/INSTALL.txt out/
+          Compress-Archive -Path out/* -DestinationPath VCS3-Pin-Matrix-Plugin-Windows.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: plugin-windows
+          path: VCS3-Pin-Matrix-Plugin-Windows.zip
+          if-no-files-found: error
+
+  bundle:
+    needs: [app, plugin-mac, plugin-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: parts
+      - name: Put everything in one folder
+        run: |
+          D="VCS3 Pin Matrix"
+          mkdir -p "$D/Mac" "$D/Windows"
+          cp parts/app-mac/*.dmg "$D/Mac/"
+          cp parts/plugin-mac/*.zip "$D/Mac/"
+          cp parts/app-windows/*.exe "$D/Windows/"
+          cp parts/plugin-windows/*.zip "$D/Windows/"
+          cp vcs3-app/README-DIST.txt "$D/はじめにお読みください.txt"
+          find "$D" -type f -exec ls -l {} \;
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VCS3-Pin-Matrix
+          path: VCS3 Pin Matrix
+          if-no-files-found: error
+      - name: Upload to Dropbox
+        env:
+          DROPBOX_APP_KEY: ${{ secrets.DROPBOX_APP_KEY }}
+          DROPBOX_APP_SECRET: ${{ secrets.DROPBOX_APP_SECRET }}
+          DROPBOX_REFRESH_TOKEN: ${{ secrets.DROPBOX_REFRESH_TOKEN }}
+        run: |
+          if [ -z "$DROPBOX_REFRESH_TOKEN" ]; then
+            echo "::notice::Dropbox secrets are not set; the folder is only in the VCS3-Pin-Matrix artifact."
+            exit 0
+          fi
+          python3 .github/scripts/dropbox_upload.py "VCS3 Pin Matrix" "/VCS3 Pin Matrix"

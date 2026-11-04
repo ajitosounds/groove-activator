@@ -12,9 +12,9 @@ Wraps both simulator pages in Electron and builds installers: the Original
 | `npm run dist:mac` | `dist/VCS3-Pin-Matrix-<version>.dmg` (macOS only; universal, ad-hoc signed) |
 | `npm run dist:linux` | `dist/VCS3-Pin-Matrix-<version>.AppImage` |
 
-The GitHub Actions workflow `.github/workflows/vcs3-app.yml` builds the macOS and
-Windows installers on every push that touches `vcs3/`, `vcs3-advanced/` or `vcs3-app/`, and attaches
-them to the run as artifacts.
+The GitHub Actions workflow `.github/workflows/vcs3-build.yml` builds the macOS and Windows installers
+and plugins, puts them in one folder (artifact `VCS3-Pin-Matrix`) and uploads it to Dropbox when the
+Dropbox secrets are set.
 
 The installers are not signed with an Apple Developer ID or a Windows code-signing
 certificate, so macOS Gatekeeper and Windows SmartScreen warn on first launch.
