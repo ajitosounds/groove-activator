@@ -1,0 +1,42 @@
+# Builds the VCS3 Pin Matrix desktop installers (macOS .dmg, Windows .exe).
+# The installers are attached to each run as downloadable artifacts.
+name: VCS3 app installers
+
+on:
+  push:
+    paths:
+      - 'vcs3/**'
+      - 'vcs3-app/**'
+      - '.github/workflows/vcs3-app.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            script: dist:mac
+            files: vcs3-app/dist/*.dmg
+          - os: windows-latest
+            script: dist:win
+            files: vcs3-app/dist/*.exe
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: vcs3-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run ${{ matrix.script }}
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VCS3-Pin-Matrix-${{ runner.os }}
+          path: ${{ matrix.files }}
+          if-no-files-found: error

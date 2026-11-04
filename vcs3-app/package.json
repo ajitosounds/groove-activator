@@ -1,0 +1,59 @@
+{
+  "name": "vcs3-pin-matrix",
+  "productName": "VCS3 Pin Matrix",
+  "version": "1.0.0",
+  "description": "A VCS3-style synthesizer with a 16x16 pin matrix",
+  "author": "Groove Activators Club",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "sync": "node scripts/sync.js",
+    "start": "npm run sync && electron .",
+    "dist:win": "npm run sync && electron-builder --win nsis --x64",
+    "dist:mac": "npm run sync && electron-builder --mac dmg --universal",
+    "dist:linux": "npm run sync && electron-builder --linux AppImage --x64"
+  },
+  "devDependencies": {
+    "electron": "33.2.1",
+    "electron-builder": "25.1.8"
+  },
+  "build": {
+    "appId": "club.grooveactivators.vcs3pinmatrix",
+    "productName": "VCS3 Pin Matrix",
+    "files": [
+      "main.js",
+      "app/**"
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "VCS3 Pin Matrix",
+      "artifactName": "VCS3-Pin-Matrix-Setup-${version}.${ext}"
+    },
+    "mac": {
+      "category": "public.app-category.music",
+      "target": "dmg",
+      "identity": "-"
+    },
+    "dmg": {
+      "artifactName": "VCS3-Pin-Matrix-${version}.${ext}"
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "Audio",
+      "artifactName": "VCS3-Pin-Matrix-${version}.${ext}"
+    },
+    "publish": null
+  }
+}
