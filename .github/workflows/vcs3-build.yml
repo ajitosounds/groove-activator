@@ -4,7 +4,7 @@
 #     Mac/      app installer (.dmg) and plugin zip (VST3, AU, Standalone)
 #     Windows/  app installer (.exe) and plugin zip (VST3, Standalone)
 # The folder is attached to the run as the artifact "VCS3-Pin-Matrix", and uploaded to Dropbox
-# ("/VCS3 Pin Matrix") when the DROPBOX_APP_KEY, DROPBOX_APP_SECRET and DROPBOX_REFRESH_TOKEN secrets are set.
+# ("/ファミリー ルーム/VCS3 Pin Matrix", the family's shared Family Room) when the DROPBOX_APP_KEY, DROPBOX_APP_SECRET and DROPBOX_REFRESH_TOKEN secrets are set.
 name: VCS3 build
 
 on:
@@ -140,4 +140,4 @@ jobs:
             echo "::notice::Dropbox secrets are not set; the folder is only in the VCS3-Pin-Matrix artifact."
             exit 0
           fi
-          python3 .github/scripts/dropbox_upload.py "VCS3 Pin Matrix" "/VCS3 Pin Matrix"
+          python3 .github/scripts/dropbox_upload.py "VCS3 Pin Matrix" "/ファミリー ルーム/VCS3 Pin Matrix"
