@@ -178,12 +178,13 @@ details.help b { color: var(--ink); }
       <div class="matrix-wrap">
         <div class="mod" style="border:0;background:none;padding:0;--mc:var(--c-env)"><h2>Patch Matrix <span>行＝出どころ → 列＝行き先</span></h2></div>
         <div class="brushes" role="group" aria-label="差すピンの色">
-          <button type="button" data-brush="w" aria-pressed="true"><i class="dot" style="background:var(--pin-white)"></i>白 ×1（誤差あり）</button>
-          <button type="button" data-brush="r" aria-pressed="false"><i class="dot" style="background:var(--pin-red)"></i>赤 ×1（精密）</button>
-          <button type="button" data-brush="g" aria-pressed="false"><i class="dot" style="background:var(--pin-green)"></i>緑 ×0.25</button>
+          <button type="button" data-brush="w" aria-pressed="true"><i class="dot" style="background:var(--pin-white)"></i>白 2.7kΩ（×1）</button>
+          <button type="button" data-brush="r" aria-pressed="false"><i class="dot" style="background:var(--pin-red)"></i>赤（反転〜正相）</button>
+          <button type="button" data-brush="g" aria-pressed="false"><i class="dot" style="background:var(--pin-green)"></i>緑 68kΩ（×0.66）</button>
+          <span class="knobs" id="redKnob"></span>
         </div>
         <div class="matrix-scroll"><div class="matrix" id="matrix"></div></div>
-        <p class="hint">穴をクリックで選んだ色のピンを差す。同じ色のピンをもう一度クリックで抜く。白ピンは 1 本ごとに ±2% のばらつきがあるので、音程をきっちり合わせたい所（KBD → OSC）は赤ピンを使います。</p>
+        <p class="hint">穴をクリックで選んだ色のピンを差す。同じ色のピンをもう一度クリックで抜く。赤ピンは EMS の改造で、RED PINS つまみで −1（反転）〜 +1（そのまま）に調整します（全部の赤ピン共通）。</p>
       </div>
 
       <div class="row2">
@@ -194,7 +195,7 @@ details.help b { color: var(--ink); }
           <div class="knobs" id="stickKnobs" style="margin-top:6px"></div>
         </div>
         <div class="mod" style="--mc:var(--c-rev)">
-          <h2>Scope <span>出力の波形</span></h2>
+          <h2>Scope <span id="scopeNote">出力（A 列にピンがないとき）</span></h2>
           <canvas class="scope" id="scope" width="600" height="300"></canvas>
           <div class="knobs" id="masterKnobs" style="margin-top:6px"></div>
         </div>
@@ -203,7 +204,7 @@ details.help b { color: var(--ink); }
   </div>
 
   <div class="kbd-wrap">
-    <div class="mod" style="border:0;background:none;padding:0;--mc:var(--c-osc)"><h2>Keyboard <span>KBD 行の電圧（赤ピンで OSC へ）と、ENVELOPE のトリガー</span></h2></div>
+    <div class="mod" style="border:0;background:none;padding:0;--mc:var(--c-osc)"><h2>DK Keyboard <span>INPUT CH1 行に音程の電圧、CH2 行に強さの電圧。ENVELOPE も鳴らします</span></h2></div>
     <div class="kbd-head">
       <div class="oct"><button type="button" id="octDown" aria-label="1 オクターブ下げる">− OCT</button><span id="octLabel">C3–C5</span><button type="button" id="octUp" aria-label="1 オクターブ上げる">OCT +</button></div>
       <div class="knobs" id="kbdKnobs"></div>
@@ -227,8 +228,9 @@ details.help b { color: var(--ink); }
       <li><b>電源 ON</b> で音が出ます。プリセットを選ぶと、つまみとピンがまとめて変わります。</li>
       <li><b>マトリクス</b>：行（左）が出どころ、列（上）が行き先です。たとえば「OSC 1 SAW」行 ×「FILTER」列にピンを差すと、オシレーター 1 のノコギリ波がフィルターに入ります。音も制御電圧も同じ扱いなので、OSC 3 を「OSC 1 Hz」列に差せばビブラート、「FILT Hz」列ならワウになります。</li>
       <li>各モジュールの <b>LEVEL</b> つまみが、その出どころからマトリクスへ出る量です。0 だとピンを差しても何も出ません。</li>
-      <li><b>ENVELOPE（台形）</b>：ATTACK で上がり、ON の間とどまり、DECAY で下がり、OFF の間休んで繰り返します。OFF を 10（∞）にすると繰り返さず、キーボード・TRIGGER・ENV TRIG 列の信号でだけ動きます。ENV IN 列に入れた音が「ENV SIGNAL」行から台形どおりの音量で出ます。</li>
-      <li><b>キーボード</b>：パソコンの Z S X D C V G B H N J M ,（下の段）と Q 2 W 3 E R 5 T 6 Y 7 U I（上の段）。スペースキーは TRIGGER。KBD 行は C4 で 0、1 オクターブで 0.5 の電圧が出ます（OSC・フィルターは 0.5 で 1 オクターブ動きます）。</li>
+      <li><b>ENVELOPE（台形）</b>：ATTACK で上がり、ON の間とどまり、DECAY で下がり、OFF の間休んで繰り返します。OFF を 10（∞）にすると繰り返さず、キーボードか TRIGGER でだけ動きます。ENV IN 列に入れた音が「ENV SIGNAL」行から台形どおりの音量で出ます。</li>
+      <li><b>キーボード</b>：パソコンの Z S X D C V G B H N J M ,（下の段）と Q 2 W 3 E R 5 T 6 Y 7 U I（上の段）。スペースキーは TRIGGER。実機の DK キーボードと同じく F♯4 で 0 V、1 オクターブで 1 V が INPUT CH1 行に出ます。OSC とフィルターは 0.32 V で 1 オクターブ動くので、INPUT AMPLIFIERS の CH1 LEVEL を ×0.32 にすると平均律になります（ずらすと 1 オクターブに 12 音でない音階になります）。画面の鍵盤は押した高さで強さが変わり（上が弱く、下が強い）、INPUT CH2 行に −1〜+1 V が出ます。</li>
+      <li><b>ピン</b>：白は 2.7 kΩ（そのまま）、緑は 68 kΩ（×0.66、iVCS3 の換算）。赤は EMS の改造ピンで、RED PINS つまみで反転（−1）から正相（+1）まで決めます。A 列（METER）に差した信号はスコープに出ます。</li>
       <li>つまみは上下にドラッグ（Shift で細かく）、ホイール、矢印キーで回せます。ダブルクリックで初期値。</li>
       <li><b>ANALOG</b>（スコープの下）：実機の癖の量です。オシレーターの音程がゆっくりふらつく、電源を入れてから 1〜2 分は音程がずれていて落ち着いていく、高い音ほど音程が少し下がる、リングモジュレーターに入力が少し漏れる。0 にすると理想的な動きになります。</li>
       <li>フィルターの RESPONSE を 9 あたりより上げると自己発振して、それ自体が音源になります。</li>
@@ -238,12 +240,13 @@ details.help b { color: var(--ink); }
 
 <script type="text/plain" id="dsp">
 const SR = sampleRate;
-const OCT = 2; // 1.0 of control voltage = 2 octaves
-const NS = 17, ND = 16;
+const OCT = 1 / 0.32; // VCO and VCF respond 0.32 V/oct (signals here are in volts; full level = ±1 V)
+const NS = 16, ND = 16;
 const P = PARAM_LIST;
 const NP = P.length;
 const IX = {}; P.forEach((k, i) => IX[k] = i);
-const D = { OUT1:0, OUT2:1, RA:2, RB:3, REV:4, FIN:5, ENV:6, O1F:7, O2F:8, O3F:9, DEC:10, RMIX:11, FF:12, L1:13, L2:14, TRIG:15 };
+// columns A-P: A meter, B/C outputs, D/E ring mod, F reverb, G filter, H envelope; I-P control inputs
+const D = { MET:0, OUT1:1, OUT2:2, RA:3, RB:4, REV:5, FIN:6, ENV:7, O1F:8, O2F:9, O3F:10, DEC:11, RMIX:12, FF:13, L1:14, L2:15 };
 
 function blep(t, dt) {
   if (t < dt) { t /= dt; return t + t - t * t - 1; }
@@ -331,28 +334,29 @@ class VCS extends AudioWorkletProcessor {
     super();
     this.tg = new Float32Array(NP); this.c = new Float32Array(NP);
     this.src = new Float32Array(NS); this.col = new Float32Array(ND);
-    this.ps = new Int32Array(0); this.pd = new Int32Array(0); this.pg = new Float32Array(0);
+    this.ps = new Int32Array(0); this.pd = new Int32Array(0); this.pg = new Float32Array(0); this.pr = new Uint8Array(0);
     this.ph1 = 0; this.ph2 = 0.3; this.ph3 = 0.6;
     this.nlp = 0; this.vcf = new DiodeLadder(SR);
     this.e = 0; this.stage = 0; this.ht = 0; this.gate = false; this.trgHi = false; this.pend = false;
     this.sp1 = new Spring(33.7, 16, -0.62); this.sp2 = new Spring(41.3, 16, -0.58);
     this.t1 = 0; this.t2 = 0; this.dcL = 0; this.dcR = 0; this.dxL = 0; this.dxR = 0;
-    this.kbdT = 0; this.kbd = 0; this.stkX = 0; this.stkY = 0;
+    this.kbdT = 0; this.kbd = 0; this.dyn = 0; this.stkX = 0; this.stkY = 0;
     this.first = true; this.cnt = 0;
     // analog behaviour: slow pitch wander per oscillator and a warm-up offset that settles after power-on
     this.age = 0; this.dr = [0, 0, 0]; this.warm = [0, 1, 2].map(() => Math.random() * 2 - 1); this.pm = [1, 1, 1];
     this.port.onmessage = (ev) => {
       const m = ev.data;
       if (m.t === 'p') { for (const k in m.v) if (k in IX) this.tg[IX[k]] = m.v[k]; if (this.first) { this.c.set(this.tg); this.first = false; } }
-      else if (m.t === 'pins') { this.ps = Int32Array.from(m.s); this.pd = Int32Array.from(m.d); this.pg = Float32Array.from(m.g); }
+      else if (m.t === 'pins') { this.ps = Int32Array.from(m.s); this.pd = Int32Array.from(m.d); this.pg = Float32Array.from(m.g); this.pr = Uint8Array.from(m.r); }
       else if (m.t === 'trig') this.pend = true;
       else if (m.t === 'gate') this.gate = m.v;
       else if (m.t === 'kbd') this.kbdT = m.v;
+      else if (m.t === 'dyn') this.dyn = m.v;
       else if (m.t === 'stick') { this.stkX = m.x; this.stkY = m.y; }
     };
   }
   process(ins, outs) {
-    const o = outs[0], L = o[0], R = o[1] || o[0], n = L.length;
+    const o = outs[0], L = o[0], R = o[1] || o[0], n = L.length, MET = outs[1] ? outs[1][0] : null;
     const tg = this.tg, c = this.c, src = this.src, col = this.col;
     const ps = this.ps, pd = this.pd, pg = this.pg, np = ps.length;
     const sm = 1 - Math.exp(-1 / (0.012 * SR));
@@ -371,7 +375,8 @@ class VCS extends AudioWorkletProcessor {
     for (let t = 0; t < n; t++) {
       for (let j = 0; j < NP; j++) c[j] += (tg[j] - c[j]) * sm;
       col.fill(0);
-      for (let q = 0; q < np; q++) col[pd[q]] += src[ps[q]] * pg[q];
+      const red = c[I.redPin], pr = this.pr;
+      for (let q = 0; q < np; q++) col[pd[q]] += src[ps[q]] * (pr[q] ? red : pg[q]);
 
       // Oscillator 1: shaped sine + saw
       let f1 = c[I.o1f] * pm[0] * Math.pow(2, col[D.O1F] * OCT); f1 /= 1 + f1 * hf; f1 = f1 > fmax ? fmax : (f1 < 0.001 ? 0.001 : f1);
@@ -379,7 +384,7 @@ class VCS extends AudioWorkletProcessor {
       let ph = this.ph1, sh = Math.min(0.95, Math.max(0.05, c[I.o1shape]));
       const w = ph < sh ? 0.5 * ph / sh : 0.5 + 0.5 * (ph - sh) / (1 - sh);
       const sin1 = Math.sin(2 * Math.PI * w);
-      const saw1 = 2 * ph - 1 - blep(ph, dt1);
+      const saw1 = 1 - 2 * ph + blep(ph, dt1); // falling ramp, as on the Putney VCS3
 
       // Oscillator 2: pulse + triangle
       let f2 = c[I.o2f] * pm[1] * Math.pow(2, col[D.O2F] * OCT); f2 /= 1 + f2 * hf; f2 = f2 > fmax ? fmax : (f2 < 0.001 ? 0.001 : f2);
@@ -412,12 +417,10 @@ class VCS extends AudioWorkletProcessor {
       const filt = this.vcf.process(col[D.FIN], fc, c[I.filtRes] / 10 * 5.4) * c[I.filtLvl] / 10;
 
       // Trapezoid envelope
-      const tr = col[D.TRIG];
-      if (tr > 0.3 && !this.trgHi) { this.trgHi = true; this.pend = true; } else if (tr < 0.1) this.trgHi = false;
       if (this.pend) { this.pend = false; this.stage = 1; }
       const manual = tg[I.envOff] >= 9.9;
       const offT = 0.002 * Math.pow(2500, c[I.envOff] / 10);
-      let decT = c[I.envD] * Math.pow(2, -col[D.DEC] * OCT); if (decT < 0.002) decT = 0.002;
+      let decT = c[I.envD] * Math.pow(2, -col[D.DEC] * 2); if (decT < 0.002) decT = 0.002;
       switch (this.stage) {
         case 0: if (!manual) { this.stage = 4; this.ht = 0; } break;
         case 1: this.e += 1 / (Math.max(c[I.envA], 0.0005) * SR); if (this.e >= 1) { this.e = 1; this.stage = 2; this.ht = 0; } break;
@@ -450,16 +453,20 @@ class VCS extends AudioWorkletProcessor {
       const ol = l - this.dxL + 0.9995 * this.dcL; this.dxL = l; this.dcL = ol;
       const or = r - this.dxR + 0.9995 * this.dcR; this.dxR = r; this.dcR = or;
       L[t] = Math.tanh(ol * 0.9); R[t] = Math.tanh(or * 0.9);
+      if (MET) MET[t] = col[D.MET];
 
       // Keyboard voltage with glide
       const gl = c[I.kbdGlide];
-      this.kbd += (this.kbdT * c[I.kbdSpread] - this.kbd) * (gl < 0.002 ? 1 : 1 - Math.exp(-1 / (gl * SR)));
+      this.kbd += (this.kbdT - this.kbd) * (gl < 0.002 ? 1 : 1 - Math.exp(-1 / (gl * SR)));
 
-      src[0] = a1; src[1] = a2; src[2] = filt; src[3] = trap; src[4] = envSig; src[5] = ring; src[6] = rev; src[7] = noise;
-      src[8] = sin1 * c[I.o1sin] / 10; src[9] = saw1 * c[I.o1saw] / 10;
-      src[10] = sq2 * c[I.o2sqr] / 10; src[11] = tri2 * c[I.o2tri] / 10;
-      src[12] = sq3 * c[I.o3sqr] / 10; src[13] = tri3 * c[I.o3tri] / 10;
-      src[14] = this.stkX * c[I.stkXr] / 10; src[15] = this.stkY * c[I.stkYr] / 10; src[16] = this.kbd;
+      // rows 1-16
+      src[0] = sin1 * c[I.o1sin] / 10; src[1] = saw1 * c[I.o1saw] / 10;
+      src[2] = sq2 * c[I.o2sqr] / 10; src[3] = tri2 * c[I.o2tri] / 10;
+      src[4] = sq3 * c[I.o3sqr] / 10; src[5] = tri3 * c[I.o3tri] / 10;
+      src[6] = noise;
+      src[7] = this.kbd * c[I.in1Lvl] / 10; src[8] = this.dyn * c[I.in2Lvl] / 10; // input amps fed by the DK keyboard
+      src[9] = filt; src[10] = trap; src[11] = envSig; src[12] = ring; src[13] = rev;
+      src[14] = this.stkX * c[I.stkXr] / 10; src[15] = this.stkY * c[I.stkYr] / 10;
     }
     if ((this.cnt += n) >= 1024) { this.cnt = 0; this.port.postMessage({ e: this.e }); }
     return true;
@@ -472,23 +479,23 @@ registerProcessor('vcs3', VCS);
 (() => {
 'use strict';
 // ---------- definitions ----------
+// Rows 1-16 and columns A-P follow the Putney VCS3 patch matrix (iVCS3 manual: rows 8/9 inputs, 15/16 stick; columns A meter, B/C outputs, I-P control inputs)
 const SRC = [
-  ['out1', 'OUTPUT 1', '--c-out'], ['out2', 'OUTPUT 2', '--c-out'], ['filter', 'FILTER', '--c-filter'],
-  ['trap', 'TRAPEZOID', '--c-env'], ['env', 'ENV SIGNAL', '--c-env'], ['ring', 'RING MOD', '--c-ring'],
-  ['rev', 'REVERB', '--c-rev'], ['noise', 'NOISE', '--c-noise'],
-  ['o1sin', 'OSC 1 SINE', '--c-osc'], ['o1saw', 'OSC 1 SAW', '--c-osc'],
+  ['o1sin', 'OSC 1 SINE', '--c-osc'], ['o1saw', 'OSC 1 RAMP', '--c-osc'],
   ['o2sqr', 'OSC 2 SQUARE', '--c-osc'], ['o2tri', 'OSC 2 TRI', '--c-osc'],
   ['o3sqr', 'OSC 3 SQUARE', '--c-osc'], ['o3tri', 'OSC 3 TRI', '--c-osc'],
-  ['stkx', 'STICK X', '--c-stick'], ['stky', 'STICK Y', '--c-stick'], ['kbd', 'KBD', '--c-stick']
+  ['noise', 'NOISE', '--c-noise'], ['in1', 'INPUT CH1 (KEY)', '--c-stick'], ['in2', 'INPUT CH2 (DYN)', '--c-stick'],
+  ['filter', 'FILTER', '--c-filter'], ['trap', 'TRAPEZOID', '--c-env'], ['env', 'ENV SIGNAL', '--c-env'],
+  ['ring', 'RING MOD', '--c-ring'], ['rev', 'REVERB', '--c-rev'],
+  ['stkx', 'STICK X', '--c-stick'], ['stky', 'STICK Y', '--c-stick']
 ];
 const DST = [
-  ['out1', 'OUT 1'], ['out2', 'OUT 2'], ['ringa', 'RING A'], ['ringb', 'RING B'], ['rev', 'REVERB'],
+  ['meter', 'METER'], ['out1', 'OUT CH1'], ['out2', 'OUT CH2'], ['ringa', 'RING A'], ['ringb', 'RING B'], ['rev', 'REVERB'],
   ['filter', 'FILTER'], ['env', 'ENV IN'], ['o1f', 'OSC 1 Hz'], ['o2f', 'OSC 2 Hz'], ['o3f', 'OSC 3 Hz'],
-  ['decay', 'DECAY'], ['revmix', 'REV MIX'], ['filtf', 'FILT Hz'], ['out1lvl', 'OUT1 LVL'], ['out2lvl', 'OUT2 LVL'], ['trig', 'ENV TRIG']
+  ['decay', 'DECAY'], ['revmix', 'REV MIX'], ['filtf', 'FILT Hz'], ['out1lvl', 'CH1 LEVEL'], ['out2lvl', 'CH2 LEVEL']
 ];
 const SI = Object.fromEntries(SRC.map((s, i) => [s[0], i]));
 const DI = Object.fromEntries(DST.map((d, i) => [d[0], i]));
-// the VCS3 matrix had no connection on a few holes in this layout; mark self-feeding output holes as risky
 const fmtHz = v => v < 10 ? v.toFixed(v < 1 ? 3 : 2) + ' Hz' : v < 1000 ? v.toFixed(0) + ' Hz' : (v / 1000).toFixed(2) + ' kHz';
 const fmtS = v => v < 1 ? (v * 1000).toFixed(v < 0.01 ? 1 : 0) + ' ms' : v.toFixed(2) + ' s';
 const fmtL = v => v.toFixed(1);
@@ -497,11 +504,11 @@ const fmtOff = v => v >= 9.9 ? '∞ 手動' : fmtS(0.002 * Math.pow(2500, v / 10
 const K = (id, label, min, max, def, curve, fmt) => ({ id, label, min, max, def, curve, fmt });
 const L10 = (id, label, def = 0) => K(id, label, 0, 10, def, 'lin', fmtL);
 const MODULES = [
-  { title: 'Oscillator 1', note: 'サイン（形を変えられる）とノコギリ', c: '--c-osc', knobs: [
-    K('o1f', 'Frequency', 1, 10000, 261.63, 'log', fmtHz), K('o1shape', 'Shape', 0, 1, 0.5, 'lin', v => v.toFixed(2)),
-    L10('o1sin', 'Sine Level'), L10('o1saw', 'Saw Level')] },
+  { title: 'Oscillator 1', note: 'サイン（形を変えられる）と下りランプ', c: '--c-osc', knobs: [
+    K('o1f', 'Frequency', 1, 10000, 369.99, 'log', fmtHz), K('o1shape', 'Shape', 0, 1, 0.5, 'lin', v => v.toFixed(2)),
+    L10('o1sin', 'Sine Level'), L10('o1saw', 'Ramp Level')] },
   { title: 'Oscillator 2', note: '矩形と三角（SHAPE で幅）', c: '--c-osc', knobs: [
-    K('o2f', 'Frequency', 1, 10000, 392, 'log', fmtHz), K('o2shape', 'Shape', 0, 1, 0.5, 'lin', v => v.toFixed(2)),
+    K('o2f', 'Frequency', 1, 10000, 369.99, 'log', fmtHz), K('o2shape', 'Shape', 0, 1, 0.5, 'lin', v => v.toFixed(2)),
     L10('o2sqr', 'Square Level'), L10('o2tri', 'Tri Level')] },
   { title: 'Oscillator 3', note: '低い周波数（変調用）', c: '--c-osc', knobs: [
     K('o3f', 'Frequency', 0.025, 500, 2, 'log', fmtHz), K('o3shape', 'Shape', 0, 1, 0.5, 'lin', v => v.toFixed(2)),
@@ -514,6 +521,8 @@ const MODULES = [
     K('envA', 'Attack', 0.001, 1, 0.005, 'log', fmtS), K('envOn', 'On', 0, 2.5, 0.15, 'lin', fmtS),
     K('envD', 'Decay', 0.003, 15, 0.6, 'log', fmtS), K('envOff', 'Off', 0, 10, 10, 'lin', fmtOff),
     L10('trapLvl', 'Trapezoid'), L10('sigLvl', 'Signal Level')] },
+  { title: 'Input Amplifiers', note: 'DK キーボードの電圧（1 V/oct）', c: '--c-stick', knobs: [
+    K('in1Lvl', 'Ch1 Level', 0, 10, 3.2, 'lin', v => '×' + (v / 10).toFixed(2)), K('in2Lvl', 'Ch2 Level', 0, 10, 5, 'lin', v => '×' + (v / 10).toFixed(2))] },
   { title: 'Spring Reverb', note: '', c: '--c-rev', knobs: [L10('revMix', 'Mix'), L10('revLvl', 'Level')] },
   { title: 'Output', note: 'CH1 / CH2', c: '--c-out', wide: true, knobs: [
     L10('out1Lvl', 'Ch1 Level'), K('out1Filt', 'Ch1 Filter', -1, 1, 0, 'lin', fmtB), K('out1Pan', 'Ch1 Pan', -1, 1, -0.5, 'lin', fmtB),
@@ -522,36 +531,38 @@ const MODULES = [
 const EXTRA = {
   stick: [L10('stkXr', 'X Range', 5), L10('stkYr', 'Y Range', 5)],
   master: [L10('master', 'Master', 8), L10('analog', 'Analog', 3)],
-  kbd: [K('kbdSpread', 'Spread', 0, 2, 1, 'lin', v => v.toFixed(2)), K('kbdGlide', 'Glide', 0, 1, 0, 'lin', fmtS)]
+  kbd: [K('kbdGlide', 'Glide', 0, 1, 0, 'lin', fmtS)],
+  red: [K('redPin', 'Red Pins', -1, 1, -1, 'lin', fmtB)]
 };
-const ALLK = [...MODULES.flatMap(m => m.knobs), ...EXTRA.stick, ...EXTRA.master, ...EXTRA.kbd];
+const ALLK = [...MODULES.flatMap(m => m.knobs), ...EXTRA.stick, ...EXTRA.master, ...EXTRA.kbd, ...EXTRA.red];
 const KDEF = Object.fromEntries(ALLK.map(k => [k.id, k]));
 const PARAM_LIST = ALLK.map(k => k.id);
 
 // ---------- presets ----------
-const W = 'w', Rd = 'r', Gr = 'g';
+const W = 'w', Gr = 'g';
+// Keyboard: INPUT CH1 row at ×0.32 into the oscillators gives equal temperament (DK 1 V/oct, VCO 0.32 V/oct)
 const PRESETS = [
   { name: 'はじめの一音（サイン）', p: { o1sin: 8, sigLvl: 8, out1Lvl: 6, out2Lvl: 6, envA: 0.01, envOn: 0.1, envD: 0.5 },
-    pins: [['kbd', 'o1f', Rd], ['o1sin', 'env', W], ['env', 'out1', W], ['env', 'out2', W]] },
-  { name: 'キーボード・リード', p: { o1saw: 7, o2sqr: 5, o2f: 262.8, o2shape: 0.4, filtF: 900, filtRes: 5.5, filtLvl: 8, trapLvl: 6, sigLvl: 8,
-      envA: 0.008, envOn: 0.25, envD: 0.9, o3f: 5.2, o3tri: 1.5, revMix: 10, revLvl: 4, out1Lvl: 6, out2Lvl: 6 },
-    pins: [['kbd', 'o1f', Rd], ['kbd', 'o2f', Rd], ['kbd', 'filtf', W], ['trap', 'filtf', W], ['o3tri', 'o1f', Gr], ['o1saw', 'filter', W], ['o2sqr', 'filter', W],
+    pins: [['in1', 'o1f', W], ['o1sin', 'env', W], ['env', 'out1', W], ['env', 'out2', W]] },
+  { name: 'キーボード・リード', p: { o1saw: 7, o2sqr: 5, o2f: 371.5, o2shape: 0.4, filtF: 1300, filtRes: 5.5, filtLvl: 8, trapLvl: 4, sigLvl: 8,
+      envA: 0.008, envOn: 0.25, envD: 0.9, o3f: 5.2, o3tri: 0.4, revMix: 10, revLvl: 4, out1Lvl: 6, out2Lvl: 6 },
+    pins: [['in1', 'o1f', W], ['in1', 'o2f', W], ['in1', 'filtf', W], ['trap', 'filtf', W], ['o3tri', 'o1f', Gr], ['o1saw', 'filter', W], ['o2sqr', 'filter', W],
       ['filter', 'env', W], ['env', 'out1', W], ['env', 'out2', W], ['env', 'rev', W], ['rev', 'out1', W], ['rev', 'out2', W]] },
   { name: 'リング・モジュレーターの鐘', p: { o1sin: 8, o1f: 440, o2tri: 8, o2f: 723, ringLvl: 10, sigLvl: 10, envA: 0.002, envOn: 0, envD: 2.6,
       revMix: 4, revLvl: 10, out1Lvl: 8, out2Lvl: 8 },
-    pins: [['kbd', 'o1f', Rd], ['kbd', 'o2f', Rd], ['o1sin', 'ringa', W], ['o2tri', 'ringb', W], ['ring', 'env', W], ['env', 'rev', W], ['rev', 'out1', W], ['rev', 'out2', W]] },
-  { name: '小鳥のさえずり', p: { o1sin: 8, o1f: 2100, trapLvl: 7, o3f: 9, o3sqr: 6, sigLvl: 8, envA: 0.02, envOn: 0.04, envD: 0.14, envOff: 6.4,
-      revMix: 5, revLvl: 6, stkXr: 6, out1Lvl: 6, out2Lvl: 6 },
+    pins: [['in1', 'o1f', W], ['in1', 'o2f', W], ['o1sin', 'ringa', W], ['o2tri', 'ringb', W], ['ring', 'env', W], ['env', 'rev', W], ['rev', 'out1', W], ['rev', 'out2', W]] },
+  { name: '小鳥のさえずり', p: { o1sin: 8, o1f: 2100, trapLvl: 4, o3f: 9, o3sqr: 3, sigLvl: 8, envA: 0.02, envOn: 0.04, envD: 0.14, envOff: 6.4,
+      revMix: 5, revLvl: 6, stkXr: 4, out1Lvl: 6, out2Lvl: 6 },
     pins: [['trap', 'o1f', W], ['o3sqr', 'o1f', Gr], ['stkx', 'o1f', W], ['o1sin', 'env', W], ['env', 'rev', W], ['rev', 'out1', W], ['rev', 'out2', W]] },
-  { name: '波と風', p: { noiseCol: -0.3, noiseLvl: 8, filtF: 650, filtRes: 6.8, filtLvl: 8, o3f: 0.09, o3tri: 9, revMix: 4, revLvl: 8, stkYr: 7, out1Lvl: 6, out2Lvl: 6 },
+  { name: '波と風', p: { noiseCol: -0.3, noiseLvl: 8, filtF: 650, filtRes: 6.8, filtLvl: 8, o3f: 0.09, o3tri: 6, revMix: 4, revLvl: 8, stkYr: 5, out1Lvl: 6, out2Lvl: 6 },
     pins: [['noise', 'filter', W], ['o3tri', 'filtf', W], ['stky', 'filtf', W], ['o3tri', 'out2lvl', Gr], ['filter', 'rev', W], ['rev', 'out1', W], ['rev', 'out2', W]] },
-  { name: 'フィルターの発振音', p: { filtF: 261.63, filtRes: 10, filtLvl: 7, sigLvl: 8, o3f: 5.5, o3tri: 2, envA: 0.06, envOn: 0.4, envD: 1.4, revMix: 3, revLvl: 6, out1Lvl: 6, out2Lvl: 6 },
-    pins: [['kbd', 'filtf', Rd], ['o3tri', 'filtf', Gr], ['filter', 'env', W], ['env', 'rev', W], ['rev', 'out1', W], ['rev', 'out2', W]] },
-  { name: '脈打つドローン', p: { o1saw: 6, o1f: 55, o2sqr: 6, o2f: 82.6, o2shape: 0.3, o3f: 4, o3sqr: 8, o3tri: 3, filtF: 1200, filtRes: 6, filtLvl: 8,
-      trapLvl: 5, sigLvl: 8, envA: 0.003, envOn: 0.02, envD: 0.22, revMix: 4, revLvl: 6, out1Lvl: 6, out2Lvl: 6 },
-    pins: [['o1saw', 'filter', W], ['o2sqr', 'filter', W], ['o3sqr', 'trig', W], ['trap', 'filtf', W], ['o3tri', 'o2f', Gr], ['filter', 'env', W], ['env', 'rev', W], ['rev', 'out1', W], ['rev', 'out2', W]] },
-  { name: 'クロス変調のカオス', p: { o1sin: 6, o1f: 180, o2sqr: 5, o2tri: 7, o2f: 97, o3f: 3, o3sqr: 6, ringLvl: 8, filtF: 2500, filtRes: 7, filtLvl: 7,
-      stkXr: 8, stkYr: 8, revMix: 5, revLvl: 6, out1Lvl: 5, out2Lvl: 5 },
+  { name: 'フィルターの発振音', p: { filtF: 369.99, filtRes: 10, filtLvl: 7, sigLvl: 8, o3f: 5.5, o3tri: 0.5, envA: 0.06, envOn: 0.4, envD: 1.4, revMix: 3, revLvl: 6, out1Lvl: 6, out2Lvl: 6 },
+    pins: [['in1', 'filtf', W], ['o3tri', 'filtf', Gr], ['filter', 'env', W], ['env', 'rev', W], ['rev', 'out1', W], ['rev', 'out2', W]] },
+  { name: '脈打つドローン', p: { o1saw: 6, o1f: 55, o2sqr: 6, o2f: 82.6, o2shape: 0.3, o3f: 4, o3tri: 0.5, filtF: 1200, filtRes: 6, filtLvl: 8,
+      trapLvl: 5, sigLvl: 8, envA: 0.003, envOn: 0.02, envD: 0.22, envOff: 0, revMix: 4, revLvl: 6, out1Lvl: 6, out2Lvl: 6 },
+    pins: [['o1saw', 'filter', W], ['o2sqr', 'filter', W], ['trap', 'filtf', W], ['o3tri', 'o2f', Gr], ['filter', 'env', W], ['env', 'rev', W], ['rev', 'out1', W], ['rev', 'out2', W]] },
+  { name: 'クロス変調のカオス', p: { o1sin: 4, o1f: 180, o2sqr: 3, o2tri: 7, o2f: 97, o3f: 3, o3sqr: 6, ringLvl: 8, filtF: 2500, filtRes: 7, filtLvl: 7,
+      stkXr: 6, stkYr: 5, revMix: 5, revLvl: 6, out1Lvl: 5, out2Lvl: 5 },
     pins: [['o1sin', 'o2f', W], ['o2sqr', 'o1f', W], ['o2tri', 'ringa', W], ['o3sqr', 'ringb', W], ['ring', 'filter', W], ['stkx', 'filtf', W], ['stky', 'o1f', W],
       ['filter', 'rev', W], ['rev', 'out1', W], ['rev', 'out2', W]] }
 ];
@@ -560,19 +571,18 @@ const PRESETS = [
 const state = { p: {}, pins: new Map() }; // pins: "s,d" -> 'w'|'r'|'g'
 ALLK.forEach(k => state.p[k.id] = k.def);
 // fixed per-hole tolerance of white pins (±2%), seeded so it is the same every visit
-const tol = [];
-{ let x = 20240917; for (let i = 0; i < SRC.length * DST.length; i++) { x = (x * 1103515245 + 12345) & 0x7fffffff; tol.push(((x / 0x7fffffff) * 2 - 1) * 0.02); } }
-const pinGain = (s, d, c) => c === 'r' ? 1 : c === 'g' ? 0.25 : 1 + tol[s * DST.length + d];
+// white pin 2.7 kΩ = no attenuation, green 68 kΩ = 0.66 (iVCS3 mapping); red = adjustable from inverted (−1) to normal (+1)
+const pinGain = c => c === 'g' ? 0.66 : 1;
 
-let ctx = null, node = null, analyser = null;
+let ctx = null, node = null, analyser = null, meterAn = null;
 const $ = id => document.getElementById(id);
 const status = msg => { $('status').textContent = msg; };
 const send = m => { if (node) node.port.postMessage(m); };
 const sendParams = obj => send({ t: 'p', v: obj });
 const sendPins = () => {
-  const s = [], d = [], g = [];
-  for (const [key, c] of state.pins) { const [a, b] = key.split(',').map(Number); s.push(a); d.push(b); g.push(pinGain(a, b, c)); }
-  send({ t: 'pins', s, d, g });
+  const s = [], d = [], g = [], r = [];
+  for (const [key, c] of state.pins) { const [a, b] = key.split(',').map(Number); s.push(a); d.push(b); g.push(pinGain(c)); r.push(c === 'r' ? 1 : 0); }
+  send({ t: 'pins', s, d, g, r });
 };
 
 // ---------- knobs ----------
@@ -654,6 +664,7 @@ for (const m of MODULES) {
 EXTRA.stick.forEach(k => $('stickKnobs').appendChild(makeKnob(k, '--c-stick')));
 EXTRA.master.forEach(k => $('masterKnobs').appendChild(makeKnob(k, '--c-out')));
 EXTRA.kbd.forEach(k => $('kbdKnobs').appendChild(makeKnob(k, '--c-osc')));
+EXTRA.red.forEach(k => $('redKnob').appendChild(makeKnob(k, '--pin-red')));
 
 // ---------- matrix ----------
 const mx = $('matrix');
@@ -666,7 +677,6 @@ SRC.forEach((s, i) => {
   rh.innerHTML = `<i></i><span><b>${i + 1}</b> ${s[1]}</span>`; mx.appendChild(rh); rowHeads.push(rh);
   DST.forEach((d, j) => {
     const c = document.createElement('button'); c.type = 'button'; c.className = 'cell';
-    if ((s[0] === 'out1' && d[0] === 'out1') || (s[0] === 'out2' && d[0] === 'out2')) c.classList.add('x');
     c.setAttribute('aria-label', `${s[1]} → ${d[1]}`); c.title = `${s[1]} → ${d[1]}`;
     c.addEventListener('click', () => togglePin(i, j));
     c.addEventListener('mouseenter', () => { rowHeads[i].classList.add('hl'); colHeads[j].classList.add('hl'); });
@@ -731,7 +741,7 @@ function buildKeys() {
     el.textContent = i < 13 ? label.toUpperCase() : (label2 || '').toUpperCase();
     if (!black && pc === 0) el.title = 'C' + (3 + octave + Math.floor(i / 12));
     if (black) { el.style.left = (wx * 38 - 12) + 'px'; } else wx++;
-    el.addEventListener('pointerdown', e => { e.preventDefault(); keysEl.setPointerCapture?.(e.pointerId); noteOn(i, 'p'); curPtrKey = i; });
+    el.addEventListener('pointerdown', e => { e.preventDefault(); keysEl.setPointerCapture?.(e.pointerId); const r = el.getBoundingClientRect(); send({ t: 'dyn', v: Math.max(-1, Math.min(1, ((e.clientY - r.top) / r.height) * 2 - 1)) }); noteOn(i, 'p'); curPtrKey = i; });
     el.addEventListener('pointerenter', e => { if (e.buttons && curPtrKey !== null && curPtrKey !== i) { noteOff(curPtrKey, 'p'); noteOn(i, 'p'); curPtrKey = i; } });
     keysEl.appendChild(el); keyEls[i] = el;
   }
@@ -743,14 +753,15 @@ const midiOf = i => 48 + octave * 12 + i;
 function noteOn(i, src) {
   const id = src + i; if (held.some(h => h.id === id)) return;
   held.push({ id, i }); keyEls[i]?.classList.add('down');
-  send({ t: 'kbd', v: (midiOf(i) - 60) / 24 });
+  if (src === 'k') send({ t: 'dyn', v: 0 });
+  send({ t: 'kbd', v: (midiOf(i) - 66) / 12 });
   gateOn();
 }
 function noteOff(i, src) {
   const id = src + i, ix = held.findIndex(h => h.id === id); if (ix < 0) return;
   held.splice(ix, 1);
   if (!held.some(h => h.i === i)) keyEls[i]?.classList.remove('down');
-  if (held.length) send({ t: 'kbd', v: (midiOf(held[held.length - 1].i) - 60) / 24 });
+  if (held.length) send({ t: 'kbd', v: (midiOf(held[held.length - 1].i) - 66) / 12 });
   else gateOff();
 }
 function gateOn() { send({ t: 'gate', v: true }); send({ t: 'trig' }); gateHeld = true; }
@@ -824,9 +835,11 @@ $('power').addEventListener('click', async () => {
     const code = $('dsp').textContent.replace('PARAM_LIST', JSON.stringify(PARAM_LIST));
     try { await ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([code], { type: 'application/javascript' }))); }
     catch (e) { await ctx.audioWorklet.addModule('data:application/javascript;charset=utf-8,' + encodeURIComponent(code)); }
-    node = new AudioWorkletNode(ctx, 'vcs3', { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2] });
+    node = new AudioWorkletNode(ctx, 'vcs3', { numberOfInputs: 0, numberOfOutputs: 2, outputChannelCount: [2, 1] });
     analyser = ctx.createAnalyser(); analyser.fftSize = 2048;
-    node.connect(analyser); analyser.connect(ctx.destination);
+    node.connect(analyser, 0); analyser.connect(ctx.destination);
+    meterAn = ctx.createAnalyser(); meterAn.fftSize = 2048; const mute = ctx.createGain(); mute.gain.value = 0;
+    node.connect(meterAn, 1); meterAn.connect(mute); mute.connect(ctx.destination);
     node.port.onmessage = ev => { if (envLed) envLed.style.opacity = 0.12 + 0.88 * ev.data.e; };
     sendParams(state.p); sendPins(); send({ t: 'stick', x: stk.x, y: stk.y });
     await ctx.resume();
@@ -847,7 +860,10 @@ function drawScope() {
   if (!analyser) return;
   const W2 = cv.width, H = cv.height;
   if (!buf) buf = new Float32Array(analyser.fftSize);
-  analyser.getFloatTimeDomainData(buf);
+  const useMeter = [...state.pins.keys()].some(k => k.endsWith(',0'));
+  $('scopeNote').textContent = useMeter ? 'METER 列（A）の信号' : '出力（A 列にピンがないとき）';
+  (useMeter ? meterAn : analyser).getFloatTimeDomainData(buf);
+  const gain = useMeter ? 0.5 : 1;
   let start = 0;
   for (let i = 1; i < buf.length / 2; i++) if (buf[i - 1] <= 0 && buf[i] > 0) { start = i; break; }
   g2.fillStyle = '#0d140f'; g2.fillRect(0, 0, W2, H);
@@ -856,7 +872,7 @@ function drawScope() {
   for (let i = 1; i < 4; i++) { g2.beginPath(); g2.moveTo(0, i * H / 4); g2.lineTo(W2, i * H / 4); g2.stroke(); }
   g2.strokeStyle = '#7dffa0'; g2.lineWidth = 2; g2.beginPath();
   const span = buf.length / 2;
-  for (let i = 0; i < span; i++) { const x = i / span * W2, y = H / 2 - buf[start + i] * H * 0.45; i ? g2.lineTo(x, y) : g2.moveTo(x, y); }
+  for (let i = 0; i < span; i++) { const x = i / span * W2, y = H / 2 - buf[start + i] * gain * H * 0.45; i ? g2.lineTo(x, y) : g2.moveTo(x, y); }
   g2.stroke();
 }
 })();
