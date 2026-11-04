@@ -6,6 +6,7 @@ on:
   push:
     paths:
       - 'vcs3/**'
+      - 'vcs3-advanced/**'
       - 'vcs3-app/**'
       - '.github/workflows/vcs3-app.yml'
   workflow_dispatch:

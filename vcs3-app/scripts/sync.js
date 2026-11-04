@@ -1,8 +1,12 @@
-// Copies the simulator page (vcs3/index.html, the single source of truth) into the app bundle.
+// Copies the simulator pages (the single sources of truth) into the app bundle:
+//   ../vcs3/index.html          -> app/original.html
+//   ../vcs3-advanced/index.html -> app/advanced.html
 const fs = require('fs');
 const path = require('path');
-const src = path.join(__dirname, '..', '..', 'vcs3', 'index.html');
-const dst = path.join(__dirname, '..', 'app', 'index.html');
-fs.mkdirSync(path.dirname(dst), { recursive: true });
-fs.copyFileSync(src, dst);
-console.log('synced', path.relative(process.cwd(), src), '->', path.relative(process.cwd(), dst));
+const root = path.join(__dirname, '..', '..');
+const out = path.join(__dirname, '..', 'app');
+fs.mkdirSync(out, { recursive: true });
+for (const [from, to] of [['vcs3/index.html', 'original.html'], ['vcs3-advanced/index.html', 'advanced.html']]) {
+  fs.copyFileSync(path.join(root, from), path.join(out, to));
+  console.log('synced', from, '->', 'app/' + to);
+}
