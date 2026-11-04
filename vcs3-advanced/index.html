@@ -754,7 +754,27 @@ const PIN_DEF = { w: 1, g: 0.66, r: -1 };
 let ctx = null, node = null, analyser = null, meterAn = null;
 const $ = id => document.getElementById(id);
 const status = msg => { $('status').textContent = msg; };
-const send = m => { if (node) node.port.postMessage(m); };
+// Inside the VCS3 Pin Matrix plugin (JUCE), the page is only the panel: sound and MIDI come from the host,
+// and every change goes to the C++ engine instead of an AudioWorklet.
+const HOST = (window.__JUCE__ && window.__JUCE__.backend) ? window.__JUCE__.backend : null;
+let hostReady = false, snapTimer = null;
+const STATEFUL = { p: 1, pins: 1, dk: 1, voices: 1, stick: 1 };
+const send = m => {
+  if (HOST) {
+    if (!hostReady) return;
+    HOST.emitEvent('msg', m);
+    if (STATEFUL[m.t]) { clearTimeout(snapTimer); snapTimer = setTimeout(() => HOST.emitEvent('msg', { t: 'snapshot', data: snapshot() }), 250); }
+  } else if (node) node.port.postMessage(m);
+};
+// everything the engine needs, plus the patch for reopening the panel (used by the plugin and its build tools)
+function snapshot() {
+  const s = [], d = [], g = [];
+  for (const [key, pin] of state.pins) { const [a, b] = key.split(',').map(Number); s.push(a); d.push(b); g.push(pin.g); }
+  return { patch: currentPatch(), p: { ...state.p }, pins: { s, d, g },
+    dk: { in1Sig: state.dk.in1 === 'sig', in2Key: state.dk.in2 === 'key', priority: state.dk.priority },
+    voices: state.voices, stick: [stk.x, stk.y] };
+}
+window.vcs3 = { snapshot: () => snapshot() };
 const sendParams = obj => send({ t: 'p', v: obj });
 let pinOrder = [];
 const sendPins = () => {
@@ -1060,6 +1080,20 @@ $('restorePatch').addEventListener('click', () => {
   try { applyPatch(JSON.parse(t)); status('保存したパッチを呼び出しました。'); } catch (e) { status('保存したパッチが壊れています。'); }
 });
 applyPatch(PRESETS[0]);
+if (HOST) {
+  // wait for the plugin to send the saved state before sending anything back
+  $('power').hidden = true; $('midiBtn').hidden = true;
+  status('プラグインとして動いています。音と MIDI は DAW から来ます（鍵盤のキーも使えます）。');
+  HOST.addEventListener('restore', d => {
+    hostReady = true;
+    if (d && d.patch) applyPatch(d.patch); else applyPatch(PRESETS[0]);
+    if (d && d.stick) { stk.x = d.stick[0]; stk.y = d.stick[1]; }
+    renderStick();
+  });
+  HOST.addEventListener('engine', d => { onEngine(d); hostScope = d; });
+  HOST.emitEvent('msg', { t: 'hello' });
+  requestAnimationFrame(drawScope);
+}
 
 // ---------- audio ----------
 $('power').addEventListener('click', async () => {
@@ -1133,14 +1167,16 @@ function onMidi(ev) {
 // ---------- scope ----------
 const cv = $('scope'), g2 = cv.getContext('2d');
 let buf = null;
+let hostScope = null;
 function drawScope() {
   requestAnimationFrame(drawScope);
-  if (!analyser) return;
+  if (!analyser && !hostScope) return;
   const W2 = cv.width, H = cv.height;
-  if (!buf) buf = new Float32Array(analyser.fftSize);
+  if (!buf) buf = new Float32Array(2048);
   const useMeter = [...state.pins.keys()].some(k => k.endsWith(',0'));
   $('scopeNote').textContent = useMeter ? 'METER 列（A）の信号' : '出力（A 列にピンがないとき）';
-  (useMeter ? meterAn : analyser).getFloatTimeDomainData(buf);
+  if (hostScope) { const src = useMeter ? hostScope.meter : hostScope.out; if (buf.length !== src.length) buf = new Float32Array(src.length); buf.set(src); }
+  else (useMeter ? meterAn : analyser).getFloatTimeDomainData(buf);
   const gain = useMeter ? 0.5 : 1;
   let start = 0;
   for (let i = 1; i < buf.length / 2; i++) if (buf[i - 1] <= 0 && buf[i] > 0) { start = i; break; }
