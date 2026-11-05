@@ -11,7 +11,7 @@ juce::WebBrowserComponent::Options webOptions(VCS3Processor& p, std::function<st
    #if JUCE_WINDOWS
     o = o.withBackend(juce::WebBrowserComponent::Options::Backend::webview2)
          .withWinWebView2Options(juce::WebBrowserComponent::Options::WinWebView2{}
-             .withUserDataFolder(juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("VCS3PinMatrix")));
+             .withUserDataFolder(juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("AJTJOY16")));
    #endif
     return o;
 }

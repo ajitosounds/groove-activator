@@ -1,4 +1,4 @@
-// VCS3 Pin Matrix Advanced — sound engine.
+// AJT JOY16 Advanced — sound engine.
 // A line-for-line port of the AudioWorklet in vcs3-advanced/index.html; keep the two in step.
 // Signals are in volts, using the levels and sensitivities of the 1970 VCS3 Users Manual.
 #pragma once

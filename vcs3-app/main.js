@@ -16,7 +16,7 @@ function show(ed) {
   savePrefs({ ...loadPrefs(), edition });
   if (win) {
     win.loadFile(path.join(__dirname, 'app', EDITIONS[edition]));
-    win.setTitle(edition === 'advanced' ? 'VCS3 Pin Matrix Advanced' : 'VCS3 Pin Matrix');
+    win.setTitle(edition === 'advanced' ? 'AJT JOY16 Advanced' : 'AJT JOY16');
   }
   buildMenu();
 }

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>VCS3 Pin Matrix</title>
+<title>AJT JOY16</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -162,7 +162,7 @@ details.help b { color: var(--ink); }
 <body>
 <div class="case">
   <header class="top">
-    <div class="brand">VCS3 Pin Matrix<small>3 oscillators · noise · ring mod · filter · trapezoid · spring reverb</small></div>
+    <div class="brand">AJT JOY16<small>3 oscillators · noise · ring mod · filter · trapezoid · spring reverb</small></div>
     <div class="tools">
       <button class="power" id="power" type="button">電源 ON</button>
       <select id="preset" aria-label="プリセット"></select>
@@ -184,7 +184,7 @@ details.help b { color: var(--ink); }
           <span class="knobs" id="redKnob"></span>
         </div>
         <div class="matrix-scroll"><div class="matrix" id="matrix"></div></div>
-        <p class="hint">穴をクリックで選んだ色のピンを差す。同じ色のピンをもう一度クリックで抜く。赤ピンは EMS の改造で、RED PINS つまみで −1（反転）〜 +1（そのまま）に調整します（全部の赤ピン共通）。</p>
+        <p class="hint">穴をクリックで選んだ色のピンを差す。同じ色のピンをもう一度クリックで抜く。赤ピンは実機の改造で、RED PINS つまみで −1（反転）〜 +1（そのまま）に調整します（全部の赤ピン共通）。</p>
       </div>
 
       <div class="row2">
@@ -226,11 +226,11 @@ details.help b { color: var(--ink); }
     <summary>使い方</summary>
     <ul>
       <li><b>電源 ON</b> で音が出ます。プリセットを選ぶと、つまみとピンがまとめて変わります。</li>
-      <li><b>マトリクス</b>：行（左）が出どころ、列（上）が行き先です。並びは 1970 年の VCS3 マニュアルの表と同じで、行は 1〜16、列は A〜P です。たとえば H2（「OSC 1 RAMP」行 ×「FILTER」列）にピンを差すと、オシレーター 1 のランプがフィルターに入ります。I〜P 列は制御入力で、OSC 3 を I 列（OSC 1 FREQ）に差せばビブラート、N 列（FILTER FREQ）ならワウになります。実機と同じく周波数の入力は逆向きで、マイナスの電圧で音程が上がります。</li>
+      <li><b>マトリクス</b>：行（左）が出どころ、列（上）が行き先です。並びは 1970 年の実機のマニュアルの表と同じで、行は 1〜16、列は A〜P です。たとえば H2（「OSC 1 RAMP」行 ×「FILTER」列）にピンを差すと、オシレーター 1 のランプがフィルターに入ります。I〜P 列は制御入力で、OSC 3 を I 列（OSC 1 FREQ）に差せばビブラート、N 列（FILTER FREQ）ならワウになります。実機と同じく周波数の入力は逆向きで、マイナスの電圧で音程が上がります。</li>
       <li>各モジュールの <b>LEVEL</b> つまみが、その出どころからマトリクスへ出る量です。0 だとピンを差しても何も出ません。<b>OUTPUT の CH1・CH2 LEVEL</b> はそれ自体が制御電圧なので、実機と同じく 4 あたりまで回さないと音が出ません。O・P 列に入れた電圧がこれに足されます。</li>
       <li><b>ENVELOPE（台形）</b>：ATTACK で上がり、ON の間とどまり、DECAY で下がり、OFF の間休んで繰り返します。OFF を 6 より右にすると繰り返さず、キーボードか TRIGGER でだけ動きます。ON は ATTACK の始まりから数えるので、ATTACK が ON より長いと立ち上がりの途中から DECAY がかかります。D 列に入れた音が 12 行（ENV SIGNAL）から台形どおりの音量で出ます。11 行（TRAPEZOID）は実機どおり、休みで +3 V、ON で −3 V の向きです。オシレーターに入れると音の出だしで音程が上がり、出力の LEVEL（O・P 列）に入れると逆向きのエンベロープになります。</li>
       <li><b>キーボード</b>：パソコンの Z S X D C V G B H N J M ,（下の段）と Q 2 W 3 E R 5 T 6 Y 7 U I（上の段）。スペースキーは TRIGGER。実機の DK キーボードと同じく F♯4 で 0 V、1 オクターブで 1 V が INPUT CH1 行に出ます。電圧の向きも実機どおりで、高い鍵ほどマイナスです。OSC 1・2 は 0.32 V、OSC 3 は 0.26 V、フィルターは 0.2 V で 1 オクターブ動くので、INPUT AMPLIFIERS の CH1 LEVEL を ×0.32 にするとオシレーターが平均律になります。フィルターに合わせるなら ×0.20、または ×0.32 のまま緑ピンです（ずらすと 1 オクターブに 12 音でない音階になります）。画面の鍵盤は押した高さで強さが変わり（上が弱く、下が強い）、INPUT CH2 行に −1〜+1 V が出ます。</li>
-      <li><b>ピン</b>：白は 2.7 kΩ（そのまま）、緑は 68 kΩ（×0.66、iVCS3 の換算）。赤は EMS の改造ピンで、RED PINS つまみで反転（−1）から正相（+1）まで決めます。A 列（METER）に差した信号はスコープに出ます。</li>
+      <li><b>ピン</b>：白は 2.7 kΩ（そのまま）、緑は 68 kΩ（×0.66、公式エミュレーターの換算）。赤は実機の改造ピンで、RED PINS つまみで反転（−1）から正相（+1）まで決めます。A 列（METER）に差した信号はスコープに出ます。</li>
       <li>つまみは上下にドラッグ（Shift で細かく）、ホイール、矢印キーで回せます。ダブルクリックで初期値。</li>
       <li><b>ANALOG</b>（スコープの下）：実機の癖の量です。オシレーターの音程がゆっくりふらつく、電源を入れてから 1〜2 分は音程がずれていて落ち着いていく、高い音ほど音程が少し下がる、リングモジュレーターに入力が少し漏れる。0 にすると理想的な動きになります。</li>
       <li>フィルターの RESPONSE は 0 で 12 dB/oct のローパスです。5〜6 あたりで共振が最も鋭くなり、それより右で自己発振して、それ自体が音源（サイン波）になります。</li>

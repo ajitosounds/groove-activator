@@ -1,7 +1,7 @@
 """Uploads a folder to Dropbox, replacing files that are already there.
 
 Needs DROPBOX_APP_KEY, DROPBOX_APP_SECRET and DROPBOX_REFRESH_TOKEN in the environment.
-Usage: python dropbox_upload.py <local folder> <dropbox folder, e.g. "/VCS3 Pin Matrix">
+Usage: python dropbox_upload.py <local folder> <dropbox folder, e.g. "/AJT JOY16">
 """
 import json, os, sys, urllib.parse, urllib.request, base64
 

@@ -1,11 +1,11 @@
-# Builds everything for VCS3 Pin Matrix and puts it in one folder:
-#   VCS3 Pin Matrix/
+# Builds everything for AJT JOY16 and puts it in one folder:
+#   AJT JOY16/
 #     はじめにお読みください.txt
 #     Mac/      app installer (.dmg) and plugin zip (VST3, AU, Standalone)
 #     Windows/  app installer (.exe) and plugin zip (VST3, Standalone)
-# The folder is attached to the run as the artifact "VCS3-Pin-Matrix", and uploaded to Dropbox
-# ("/ファミリー ルーム/VCS3 Pin Matrix", the family's shared Family Room) when the DROPBOX_APP_KEY, DROPBOX_APP_SECRET and DROPBOX_REFRESH_TOKEN secrets are set.
-name: VCS3 build
+# The folder is attached to the run as the artifact "AJT-JOY16", and uploaded to Dropbox
+# ("/ファミリー ルーム/AJT JOY16", the family's shared Family Room) when the DROPBOX_APP_KEY, DROPBOX_APP_SECRET and DROPBOX_REFRESH_TOKEN secrets are set.
+name: AJT JOY16 build
 
 on:
   push:
@@ -62,21 +62,21 @@ jobs:
       - name: Sign (ad-hoc), check the AU, package
         run: |
           A="build/VCS3PinMatrix_artefacts/Release"
-          for f in "$A/VST3/VCS3 Pin Matrix.vst3" "$A/AU/VCS3 Pin Matrix.component" "$A/Standalone/VCS3 Pin Matrix.app"; do
+          for f in "$A/VST3/AJT JOY16.vst3" "$A/AU/AJT JOY16.component" "$A/Standalone/AJT JOY16.app"; do
             codesign --force --deep --sign - "$f"
           done
           mkdir -p ~/Library/Audio/Plug-Ins/Components
-          cp -R "$A/AU/VCS3 Pin Matrix.component" ~/Library/Audio/Plug-Ins/Components/
+          cp -R "$A/AU/AJT JOY16.component" ~/Library/Audio/Plug-Ins/Components/
           killall -9 AudioComponentRegistrar 2>/dev/null || true
-          auval -v aumu V3pm Ajts
+          auval -v aumu Jy16 Ajts
           mkdir out
-          cp -R "$A/VST3/VCS3 Pin Matrix.vst3" "$A/AU/VCS3 Pin Matrix.component" "$A/Standalone/VCS3 Pin Matrix.app" out/
+          cp -R "$A/VST3/AJT JOY16.vst3" "$A/AU/AJT JOY16.component" "$A/Standalone/AJT JOY16.app" out/
           cp vcs3-plugin/INSTALL.txt out/
-          (cd out && zip -qry ../VCS3-Pin-Matrix-Plugin-macOS.zip .)
+          (cd out && zip -qry ../AJT-JOY16-Plugin-macOS.zip .)
       - uses: actions/upload-artifact@v4
         with:
           name: plugin-mac
-          path: VCS3-Pin-Matrix-Plugin-macOS.zip
+          path: AJT-JOY16-Plugin-macOS.zip
           if-no-files-found: error
 
   plugin-windows:
@@ -97,14 +97,14 @@ jobs:
         run: |
           $A = "build/VCS3PinMatrix_artefacts/Release"
           New-Item -ItemType Directory out | Out-Null
-          Copy-Item -Recurse "$A/VST3/VCS3 Pin Matrix.vst3" out/
-          Copy-Item "$A/Standalone/VCS3 Pin Matrix.exe" out/
+          Copy-Item -Recurse "$A/VST3/AJT JOY16.vst3" out/
+          Copy-Item "$A/Standalone/AJT JOY16.exe" out/
           Copy-Item vcs3-plugin/INSTALL.txt out/
-          Compress-Archive -Path out/* -DestinationPath VCS3-Pin-Matrix-Plugin-Windows.zip
+          Compress-Archive -Path out/* -DestinationPath AJT-JOY16-Plugin-Windows.zip
       - uses: actions/upload-artifact@v4
         with:
           name: plugin-windows
-          path: VCS3-Pin-Matrix-Plugin-Windows.zip
+          path: AJT-JOY16-Plugin-Windows.zip
           if-no-files-found: error
 
   bundle:
@@ -117,7 +117,7 @@ jobs:
           path: parts
       - name: Put everything in one folder
         run: |
-          D="VCS3 Pin Matrix"
+          D="AJT JOY16"
           mkdir -p "$D/Mac" "$D/Windows"
           cp parts/app-mac/*.dmg "$D/Mac/"
           cp parts/plugin-mac/*.zip "$D/Mac/"
@@ -127,8 +127,8 @@ jobs:
           find "$D" -type f -exec ls -l {} \;
       - uses: actions/upload-artifact@v4
         with:
-          name: VCS3-Pin-Matrix
-          path: VCS3 Pin Matrix
+          name: AJT-JOY16
+          path: AJT JOY16
           if-no-files-found: error
       - name: Upload to Dropbox
         env:
@@ -137,7 +137,7 @@ jobs:
           DROPBOX_REFRESH_TOKEN: ${{ secrets.DROPBOX_REFRESH_TOKEN }}
         run: |
           if [ -z "$DROPBOX_REFRESH_TOKEN" ]; then
-            echo "::notice::Dropbox secrets are not set; the folder is only in the VCS3-Pin-Matrix artifact."
+            echo "::notice::Dropbox secrets are not set; the folder is only in the AJT-JOY16 artifact."
             exit 0
           fi
-          python3 .github/scripts/dropbox_upload.py "VCS3 Pin Matrix" "/ファミリー ルーム/VCS3 Pin Matrix"
+          python3 .github/scripts/dropbox_upload.py "AJT JOY16" "/ファミリー ルーム/AJT JOY16"

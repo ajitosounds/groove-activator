@@ -1,22 +1,24 @@
-VCS3 Pin Matrix（Advanced）プラグイン
-=====================================
+AJT JOY16（Advanced）プラグイン
+================================
+AJITO SOUNDS
 
 入っているもの
-  Mac:     VCS3 Pin Matrix.vst3 / VCS3 Pin Matrix.component（AU）/ VCS3 Pin Matrix.app（単体アプリ）
-  Windows: VCS3 Pin Matrix.vst3 / VCS3 Pin Matrix.exe（単体アプリ）
+  Mac:     AJT JOY16.vst3 / AJT JOY16.component（AU）/ AJT JOY16.app（単体アプリ）
+  Windows: AJT JOY16.vst3 / AJT JOY16.exe（単体アプリ）
 
 入れる場所
   Mac  VST3: /Library/Audio/Plug-Ins/VST3/        （自分だけなら ~/Library/Audio/Plug-Ins/VST3/）
   Mac  AU:   /Library/Audio/Plug-Ins/Components/  （自分だけなら ~/Library/Audio/Plug-Ins/Components/）
   Win  VST3: C:\Program Files\Common Files\VST3\
 
-入れたら DAW でプラグインを再スキャンしてください。インストゥルメント（音源）として出てきます。
+入れたら DAW でプラグインを再スキャンしてください。インストゥルメント（音源）として
+「AJITO SOUNDS」→「AJT JOY16」に出てきます。
 
 はじめて使うとき
   署名（Apple の公証 / Windows のコード署名）をしていないので、警告が出ることがあります。
   Mac で「開発元を確認できない」「壊れている」と出たら、ターミナルで次を実行してから DAW を起動し直してください。
-    xattr -dr com.apple.quarantine "/Library/Audio/Plug-Ins/VST3/VCS3 Pin Matrix.vst3"
-    xattr -dr com.apple.quarantine "/Library/Audio/Plug-Ins/Components/VCS3 Pin Matrix.component"
+    xattr -dr com.apple.quarantine "/Library/Audio/Plug-Ins/VST3/AJT JOY16.vst3"
+    xattr -dr com.apple.quarantine "/Library/Audio/Plug-Ins/Components/AJT JOY16.component"
   Windows の単体アプリで SmartScreen が出たら「詳細情報」→「実行」。
   画面の表示に Microsoft Edge WebView2 ランタイムを使います（Windows 10/11 には通常入っています）。
 

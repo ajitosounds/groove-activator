@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(VCS3PinMatrix VERSION 1.0.0)
+project(VCS3PinMatrix VERSION 1.2.0)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -18,11 +18,11 @@ if(APPLE)
 endif()
 
 juce_add_plugin(VCS3PinMatrix
-  PRODUCT_NAME "VCS3 Pin Matrix"
+  PRODUCT_NAME "AJT JOY16"
   COMPANY_NAME "AJITO SOUNDS"
-  BUNDLE_ID com.ajitosounds.vcs3pinmatrix
+  BUNDLE_ID com.ajitosounds.joy16
   PLUGIN_MANUFACTURER_CODE Ajts
-  PLUGIN_CODE V3pm
+  PLUGIN_CODE Jy16
   FORMATS ${VCS3_FORMATS}
   IS_SYNTH TRUE
   NEEDS_MIDI_INPUT TRUE

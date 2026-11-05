@@ -1,4 +1,4 @@
-# VCS3 Pin Matrix — plugin (VST3 / AU / Standalone)
+# AJT JOY16 — plugin (VST3 / AU / Standalone)
 
 The Advanced edition as an instrument plugin, built with JUCE 8.
 
