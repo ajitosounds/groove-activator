@@ -144,7 +144,8 @@ jobs:
             # top-level entries only (nested bundles are listed under ChildBundles, not as array items)
             i=0
             while /usr/libexec/PlistBuddy -c "Print :$i" "pk/$c.plist" >/dev/null 2>&1; do
-              /usr/libexec/PlistBuddy -c "Set :$i:BundleIsRelocatable false" "pk/$c.plist"
+              /usr/libexec/PlistBuddy -c "Set :$i:BundleIsRelocatable false" "pk/$c.plist" 2>/dev/null \
+                || /usr/libexec/PlistBuddy -c "Add :$i:BundleIsRelocatable bool false" "pk/$c.plist"
               i=$((i+1))
             done
             pkgbuild --root "stage/$c" --component-plist "pk/$c.plist" --identifier "com.ajitosounds.joy16.$c" --version "$V" --install-location / "pk/$c.pkg"
