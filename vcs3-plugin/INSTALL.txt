@@ -4,7 +4,8 @@ AJITO SOUNDS
 
 入っているもの
   Mac:     AJT JOY16.vst3 / AJT JOY16.component（AU）/ AJT JOY16.app（単体アプリ）
-  Windows: AJT JOY16.vst3 / AJT JOY16.exe（単体アプリ）
+           AJT JOY16 FX.vst3 / AJT JOY16 FX.component（エフェクト版）
+  Windows: AJT JOY16.vst3 / AJT JOY16 FX.vst3（エフェクト版）/ AJT JOY16.exe（単体アプリ）
 
 入れる場所
   Mac  VST3: /Library/Audio/Plug-Ins/VST3/        （自分だけなら ~/Library/Audio/Plug-Ins/VST3/）
@@ -12,7 +13,8 @@ AJITO SOUNDS
   Win  VST3: C:\Program Files\Common Files\VST3\
 
 入れたら DAW でプラグインを再スキャンしてください。インストゥルメント（音源）として
-「AJITO SOUNDS」→「AJT JOY16」に出てきます。
+「AJITO SOUNDS」→「AJT JOY16」に、エフェクト（Audio FX）として「AJT JOY16 FX」に出てきます。
+FX 版はトラックの音が INPUT CH1（左）/ CH2（右）の行に入ります。
 
 はじめて使うとき
   署名（Apple の公証 / Windows のコード署名）をしていないので、警告が出ることがあります。

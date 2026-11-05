@@ -8,10 +8,22 @@ int64_t panelNoteId(const juce::String& s) { return (int64_t) (std::hash<std::st
 int64_t midiNoteId(int ch, int note) { return -(int64_t) (ch * 128 + note) - 1; }
 }
 
+juce::AudioProcessor::BusesProperties VCS3Processor::buses() {
+    auto b = BusesProperties();
+   #if JOY16_FX
+    b = b.withInput("Input", juce::AudioChannelSet::stereo(), true);
+   #endif
+    return b.withOutput("Output", juce::AudioChannelSet::stereo(), true);
+}
+
 VCS3Processor::VCS3Processor()
-    : AudioProcessor(BusesProperties().withOutput("Output", juce::AudioChannelSet::stereo(), true))
+    : AudioProcessor(buses())
 {
+   #if JOY16_FX
+    const juce::String def(BinaryData::default_snapshot_fx_json, BinaryData::default_snapshot_fx_jsonSize);
+   #else
     const juce::String def(BinaryData::default_snapshot_json, BinaryData::default_snapshot_jsonSize);
+   #endif
     const auto snap = juce::JSON::parse(def);
     if (auto* p = snap["p"].getDynamicObject())
         for (auto& prop : p->getProperties()) paramNames.push_back(prop.name.toString().toStdString());
@@ -20,7 +32,13 @@ VCS3Processor::VCS3Processor()
 }
 
 bool VCS3Processor::isBusesLayoutSupported(const BusesLayout& layouts) const {
-    return layouts.getMainOutputChannelSet() == juce::AudioChannelSet::stereo();
+    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo()) return false;
+   #if JOY16_FX
+    const auto in = layouts.getMainInputChannelSet();
+    return in == juce::AudioChannelSet::stereo() || in == juce::AudioChannelSet::mono();
+   #else
+    return true;
+   #endif
 }
 
 void VCS3Processor::prepareToPlay(double sampleRate, int samplesPerBlock) {
@@ -45,6 +63,7 @@ void VCS3Processor::applySnapshot(const juce::var& snap) {
         hostState.ps.resize(n); hostState.pd.resize(n); hostState.pg.resize(n);
         const auto dk = snap["dk"];
         hostState.in1Sig = (bool) dk["in1Sig"]; hostState.in2Key = (bool) dk["in2Key"];
+        hostState.in1Ext = JOY16_FX && (bool) dk["in1Ext"]; hostState.in2Ext = JOY16_FX && (bool) dk["in2Ext"];
         hostState.highPriority = dk["priority"].toString() != "last";
         hostState.voices = juce::jlimit(1, vcs3::MAXV, (int) snap.getProperty("voices", 1));
         if (auto* st = snap["stick"].getArray(); st && st->size() == 2) { hostState.stickX = (*st)[0]; hostState.stickY = (*st)[1]; }
@@ -55,8 +74,10 @@ void VCS3Processor::applySnapshot(const juce::var& snap) {
 }
 
 juce::var VCS3Processor::currentSnapshot() const {
-    const juce::ScopedLock sl(snapLock);
-    return juce::JSON::parse(snapshotJson);
+    juce::var v;
+    { const juce::ScopedLock sl(snapLock); v = juce::JSON::parse(snapshotJson); }
+    if (auto* o = v.getDynamicObject()) o->setProperty("fx", (bool) JOY16_FX); // tells the panel which edition it is in
+    return v;
 }
 
 void VCS3Processor::push(const Cmd& c) {
@@ -86,6 +107,7 @@ void VCS3Processor::handlePanelMessage(const juce::var& m) {
     if (t == "dk") {
         const juce::SpinLock::ScopedLockType sl(stateLock);
         hostState.in1Sig = (bool) m["in1Sig"]; hostState.in2Key = (bool) m["in2Key"]; hostState.highPriority = m["priority"].toString() != "last";
+        hostState.in1Ext = JOY16_FX && (bool) m["in1Ext"]; hostState.in2Ext = JOY16_FX && (bool) m["in2Ext"];
         dkDirty = true; return;
     }
     if (t == "voices") { { const juce::SpinLock::ScopedLockType sl(stateLock); hostState.voices = juce::jlimit(1, vcs3::MAXV, (int) m["v"]); } voicesDirty = true; return; }
@@ -114,7 +136,7 @@ void VCS3Processor::syncHostState() {
     if (!sl.isLocked()) return; // try again next block
     if (paramsDirty.exchange(false)) { for (auto& [k, v] : hostState.params) engine.setParam(k, v); engine.paramsDone(); }
     if (pinsDirty.exchange(false)) engine.setPins(hostState.ps, hostState.pd, hostState.pg);
-    if (dkDirty.exchange(false)) engine.setDk(hostState.in1Sig, hostState.in2Key, hostState.highPriority);
+    if (dkDirty.exchange(false)) engine.setDk(hostState.in1Sig, hostState.in2Key, hostState.highPriority, hostState.in1Ext, hostState.in2Ext);
     if (voicesDirty.exchange(false)) { if (hostState.voices != engine.nv) engine.setVoices(hostState.voices); }
     if (stickDirty.exchange(false)) engine.setStick(hostState.stickX, hostState.stickY);
 }
@@ -158,13 +180,18 @@ void VCS3Processor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuf
     if ((int) meterBuf.size() < n) meterBuf.resize((size_t) n); // only if the host exceeds the prepared size
     float* L = buffer.getWritePointer(0);
     float* R = buffer.getNumChannels() > 1 ? buffer.getWritePointer(1) : L;
+    // FX edition: the input shares the output buffer; render() reads each input sample before writing that output sample
+    const int nIn = getTotalNumInputChannels();
+    const float* inL = nIn > 0 ? L : nullptr;
+    const float* inR = nIn > 1 ? R : inL;
+    auto run = [&](int from, int len) { engine.render(L + from, R + from, meterBuf.data() + from, len, inL ? inL + from : nullptr, inR ? inR + from : nullptr); };
     int pos = 0;
     for (const auto meta : midi) {
         const int at = juce::jlimit(0, n, meta.samplePosition);
-        if (at > pos) { engine.render(L + pos, R + pos, meterBuf.data() + pos, at - pos); pos = at; }
+        if (at > pos) { run(pos, at - pos); pos = at; }
         handleMidi(meta.getMessage());
     }
-    if (pos < n) engine.render(L + pos, R + pos, meterBuf.data() + pos, n - pos);
+    if (pos < n) run(pos, n - pos);
     midi.clear();
 
     for (int i = 0; i < n; ++i) { outRing[(size_t) ringPos] = 0.5f * (L[i] + R[i]); meterRing[(size_t) ringPos] = meterBuf[(size_t) i]; ringPos = (ringPos + 1) % SCOPE; }

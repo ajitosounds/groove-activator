@@ -1,5 +1,5 @@
 ﻿; AJT JOY16 all-in-one Windows installer (Inno Setup 6).
-; The build workflow passes /DAppVersion, /DAppDir (Electron app folder) and /DVst3Dir (AJT JOY16.vst3 folder).
+; The build workflow passes /DAppVersion, /DAppDir (Electron app folder), /DVst3Dir (AJT JOY16.vst3 folder) and /DVst3FxDir (AJT JOY16 FX.vst3 folder).
 #define AppName "AJT JOY16"
 #ifndef AppVersion
   #define AppVersion "0.0.0"
@@ -42,6 +42,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; Components: app
 [Files]
 Source: "{#AppDir}\*"; DestDir: "{app}"; Components: app; Flags: recursesubdirs createallsubdirs ignoreversion
 Source: "{#Vst3Dir}\*"; DestDir: "{commoncf64}\VST3\AJT JOY16.vst3"; Components: vst3; Flags: recursesubdirs createallsubdirs ignoreversion
+Source: "{#Vst3FxDir}\*"; DestDir: "{commoncf64}\VST3\AJT JOY16 FX.vst3"; Components: vst3; Flags: recursesubdirs createallsubdirs ignoreversion
 
 [Icons]
 Name: "{group}\AJT JOY16"; Filename: "{app}\AJT JOY16.exe"; Components: app

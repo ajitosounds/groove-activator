@@ -108,7 +108,8 @@ struct Note { int64_t id; int note; float vel; int ch; float bend = 0, press = 0
 struct Shared {
     std::vector<double> tg, c; ParamIx I{};
     std::vector<int> ps, pd; std::vector<double> pg;
-    bool hold = false, in1Sig = false, in2Key = false;
+    bool hold = false, in1Sig = false, in2Key = false, in1Ext = false, in2Ext = false;
+    double extL = 0, extR = 0; // track audio (FX edition), in volts
     double stkX = 0, stkY = 0, toneK = 0, acK = 0, dkK = 0, fmax = 0, an = 0, hf = 0, glK = 1;
     double p1l = 0, p1r = 0, p2l = 0, p2r = 0;
 };
@@ -228,8 +229,8 @@ struct Voice {
         src[2] = sq2 * c[I.o2sqr] / 10; src[3] = tri2 * c[I.o2tri] / 10;
         src[4] = sq3 * c[I.o3sqr] / 10; src[5] = tri3 * c[I.o3tri] / 10;
         src[6] = noise;
-        src[7] = (E.in1Sig ? dkMix : kbd) * c[I.in1Lvl] / 10;
-        src[8] = (E.in2Key ? kbd : dyn) * c[I.in2Lvl] / 10;
+        src[7] = (E.in1Ext ? E.extL : E.in1Sig ? dkMix : kbd) * c[I.in1Lvl] / 10;
+        src[8] = (E.in2Ext ? E.extR : E.in2Key ? kbd : dyn) * c[I.in2Lvl] / 10;
         src[9] = filt; src[10] = trap; src[11] = envSig; src[12] = ring; src[13] = rev;
         src[14] = E.stkX; src[15] = E.stkY;
         src[16] = press; src[17] = slide;
@@ -278,7 +279,9 @@ public:
         E.ps = std::move(s); E.pd = std::move(d); E.pg = std::move(g);
         pinLv.assign(E.ps.size(), 0.f); pinOut.assign(E.ps.size(), 0.f);
     }
-    void setDk(bool in1Sig, bool in2Key, bool high) { E.in1Sig = in1Sig; E.in2Key = in2Key; highPriority = high; }
+    void setDk(bool in1Sig, bool in2Key, bool high, bool in1Ext = false, bool in2Ext = false) {
+        E.in1Sig = in1Sig; E.in2Key = in2Key; E.in1Ext = in1Ext; E.in2Ext = in2Ext; highPriority = high;
+    }
     void setStick(double x, double y) { stkX = x; stkY = y; }
     void setHold(bool h) { E.hold = h; }
     void trigger() { for (int i = 0; i < nv; ++i) { auto& v = voices[i]; v.pend = true; v.active = true; v.released = false; } }
@@ -351,8 +354,10 @@ public:
     void notePressure(int64_t id, float v) { if (Note* n = findNote(id)) { n->press = v; updateExpr(n->ch); } }
     void slide(int ch, float v) { if (ch >= 0 && ch <= 16) { chSlide[ch] = v; updateExpr(ch); } }
 
-    // render n samples; meter may be null
-    void render(float* outL, float* outR, float* meter, int n) {
+    // render n samples; meter may be null. inL/inR (may be null) carry the track audio of the FX edition;
+    // each input sample is read before the output sample at the same index is written, so they may alias outL/outR.
+    static constexpr double kExtVolts = 2.5; // full-scale input ~ the oscillators' level
+    void render(float* outL, float* outR, float* meter, int n, const float* inL = nullptr, const float* inR = nullptr) {
         auto& tg = E.tg; auto& c = E.c; const auto& I = E.I;
         if (c.empty()) { std::fill(outL, outL + n, 0.f); std::fill(outR, outR + n, 0.f); return; }
         const double sm = 1 - std::exp(-1 / (0.012 * sr));
@@ -373,6 +378,7 @@ public:
             E.p1l = std::cos(p1); E.p1r = std::sin(p1); E.p2l = std::cos(p2); E.p2r = std::sin(p2);
             const double gl = c[I.kbdGlide]; E.glK = gl < 0.002 ? 1 : 1 - std::exp(-1 / (gl * sr));
             E.stkX = 2 * stkX * c[I.stkXr] / 10; E.stkY = 2 * stkY * c[I.stkYr] / 10;
+            E.extL = inL ? inL[t] * kExtVolts : 0; E.extR = inR ? inR[t] * kExtVolts : E.extL;
             double l = 0, r = 0, met = 0;
             for (int i = 0; i < nv; ++i) {
                 auto& v = voices[i];

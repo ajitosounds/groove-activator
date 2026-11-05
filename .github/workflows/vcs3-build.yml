@@ -63,23 +63,26 @@ jobs:
       - name: Sign (ad-hoc), check the AU, package
         run: |
           A="build/VCS3PinMatrix_artefacts/Release"
+          F="build/JOY16FX_artefacts/Release"
           # every binary must run on macOS 11+, not only on the runner's own macOS
-          for b in "$A/AU/AJT JOY16.component/Contents/MacOS/AJT JOY16" "$A/VST3/AJT JOY16.vst3/Contents/MacOS/AJT JOY16" "$A/Standalone/AJT JOY16.app/Contents/MacOS/AJT JOY16"; do
+          for b in "$A/AU/AJT JOY16.component/Contents/MacOS/AJT JOY16" "$A/VST3/AJT JOY16.vst3/Contents/MacOS/AJT JOY16" "$A/Standalone/AJT JOY16.app/Contents/MacOS/AJT JOY16" \
+                   "$F/AU/AJT JOY16 FX.component/Contents/MacOS/AJT JOY16 FX" "$F/VST3/AJT JOY16 FX.vst3/Contents/MacOS/AJT JOY16 FX"; do
             for arch in arm64 x86_64; do
               m=$(vtool -arch $arch -show-build "$b" | awk '/minos/{print $2}')
               echo "$b [$arch] minos=$m"
               [ "${m%%.*}" -le 11 ] || { echo "binary requires macOS $m"; exit 1; }
             done
           done
-          for f in "$A/VST3/AJT JOY16.vst3" "$A/AU/AJT JOY16.component" "$A/Standalone/AJT JOY16.app"; do
+          for f in "$A/VST3/AJT JOY16.vst3" "$A/AU/AJT JOY16.component" "$A/Standalone/AJT JOY16.app" "$F/VST3/AJT JOY16 FX.vst3" "$F/AU/AJT JOY16 FX.component"; do
             codesign --force --deep --sign - "$f"
           done
           mkdir -p ~/Library/Audio/Plug-Ins/Components
-          cp -R "$A/AU/AJT JOY16.component" ~/Library/Audio/Plug-Ins/Components/
+          cp -R "$A/AU/AJT JOY16.component" "$F/AU/AJT JOY16 FX.component" ~/Library/Audio/Plug-Ins/Components/
           killall -9 AudioComponentRegistrar 2>/dev/null || true
           auval -v aumu Jy16 Ajts
+          auval -v aumf Jy1F Ajts
           mkdir out
-          cp -R "$A/VST3/AJT JOY16.vst3" "$A/AU/AJT JOY16.component" "$A/Standalone/AJT JOY16.app" out/
+          cp -R "$A/VST3/AJT JOY16.vst3" "$A/AU/AJT JOY16.component" "$A/Standalone/AJT JOY16.app" "$F/VST3/AJT JOY16 FX.vst3" "$F/AU/AJT JOY16 FX.component" out/
           cp vcs3-plugin/INSTALL.txt out/
           (cd out && zip -qry ../AJT-JOY16-Plugin-macOS.zip .)
       - uses: actions/upload-artifact@v4
@@ -107,6 +110,7 @@ jobs:
           $A = "build/VCS3PinMatrix_artefacts/Release"
           New-Item -ItemType Directory out | Out-Null
           Copy-Item -Recurse "$A/VST3/AJT JOY16.vst3" out/
+          Copy-Item -Recurse "build/JOY16FX_artefacts/Release/VST3/AJT JOY16 FX.vst3" out/
           Copy-Item "$A/Standalone/AJT JOY16.exe" out/
           Copy-Item vcs3-plugin/INSTALL.txt out/
           Compress-Archive -Path out/* -DestinationPath AJT-JOY16-Plugin-Windows.zip
@@ -144,8 +148,8 @@ jobs:
           (cd parts && unzip -q AJT-JOY16-Plugin-macOS.zip -d plug)
           mkdir -p stage/app/Applications stage/au/Library/Audio/Plug-Ins/Components stage/vst3/Library/Audio/Plug-Ins/VST3 pk
           cp -R "$APP" stage/app/Applications/
-          cp -R "parts/plug/AJT JOY16.component" stage/au/Library/Audio/Plug-Ins/Components/
-          cp -R "parts/plug/AJT JOY16.vst3" stage/vst3/Library/Audio/Plug-Ins/VST3/
+          cp -R "parts/plug/AJT JOY16.component" "parts/plug/AJT JOY16 FX.component" stage/au/Library/Audio/Plug-Ins/Components/
+          cp -R "parts/plug/AJT JOY16.vst3" "parts/plug/AJT JOY16 FX.vst3" stage/vst3/Library/Audio/Plug-Ins/VST3/
           for c in app au vst3; do
             # keep bundles where we put them (no relocation to copies found elsewhere)
             pkgbuild --analyze --root "stage/$c" "pk/$c.plist"
@@ -194,7 +198,7 @@ jobs:
           Expand-Archive parts/AJT-JOY16-Plugin-Windows.zip -DestinationPath parts/plug
           choco install innosetup -y --no-progress
           $iscc = Get-ChildItem "C:\Program Files (x86)\Inno Setup *\ISCC.exe" | Select-Object -First 1
-          & $iscc.FullName "/DAppVersion=$V" "/DAppDir=$PWD\vcs3-app\dist\win-unpacked" "/DVst3Dir=$PWD\parts\plug\AJT JOY16.vst3" "/O$PWD" installer/windows/joy16.iss
+          & $iscc.FullName "/DAppVersion=$V" "/DAppDir=$PWD\vcs3-app\dist\win-unpacked" "/DVst3Dir=$PWD\parts\plug\AJT JOY16.vst3" "/DVst3FxDir=$PWD\parts\plug\AJT JOY16 FX.vst3" "/O$PWD" installer/windows/joy16.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Get-ChildItem AJT-JOY16-Installer-*.exe
       - uses: actions/upload-artifact@v4

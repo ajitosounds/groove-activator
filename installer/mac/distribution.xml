@@ -15,10 +15,10 @@
   <choice id="app" title="AJT JOY16 アプリ" description="単体で動くアプリ（オリジナル / Advanced）。アプリケーションフォルダに入ります。">
     <pkg-ref id="com.ajitosounds.joy16.app"/>
   </choice>
-  <choice id="au" title="AU プラグイン" description="Logic などで使う Audio Unit。/Library/Audio/Plug-Ins/Components に入ります。">
+  <choice id="au" title="AU プラグイン" description="Logic などで使う Audio Unit（音源の AJT JOY16 と、Audio FX の AJT JOY16 FX）。/Library/Audio/Plug-Ins/Components に入ります。">
     <pkg-ref id="com.ajitosounds.joy16.au"/>
   </choice>
-  <choice id="vst3" title="VST3 プラグイン" description="Ableton Live、Cubase などで使う VST3。/Library/Audio/Plug-Ins/VST3 に入ります。">
+  <choice id="vst3" title="VST3 プラグイン" description="Ableton Live、Cubase などで使う VST3（AJT JOY16 と AJT JOY16 FX）。/Library/Audio/Plug-Ins/VST3 に入ります。">
     <pkg-ref id="com.ajitosounds.joy16.vst3"/>
   </choice>
   <pkg-ref id="com.ajitosounds.joy16.app" version="VERSION" onConclusion="none">app.pkg</pkg-ref>

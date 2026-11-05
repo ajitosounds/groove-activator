@@ -4,11 +4,16 @@
 #include <map>
 #include "Engine.h"
 
+// JOY16_FX: the Audio FX edition (AJT JOY16 FX) — same panel and engine, with the track's audio on the INPUT rows
+#ifndef JOY16_FX
+ #define JOY16_FX 0
+#endif
+
 // Settings from the panel, kept on the message thread and copied into the engine at the start of a block.
 struct HostState {
     std::map<std::string, double> params;
     std::vector<int> ps, pd; std::vector<double> pg;
-    bool in1Sig = false, in2Key = false, highPriority = true;
+    bool in1Sig = false, in2Key = false, in1Ext = false, in2Ext = false, highPriority = true;
     int voices = 1;
     double stickX = 0, stickY = 0;
 };
@@ -36,7 +41,7 @@ public:
 
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override { return true; }
-    const juce::String getName() const override { return "AJT JOY16"; }
+    const juce::String getName() const override { return JucePlugin_Name; }
     bool acceptsMidi() const override { return true; }
     bool producesMidi() const override { return false; }
     bool isMidiEffect() const override { return false; }
@@ -56,6 +61,7 @@ public:
     std::function<void()> onRestore; // set by the editor: resend the saved state to the panel
 
 private:
+    static BusesProperties buses();
     void applySnapshot(const juce::var& snap);
     void push(const Cmd& c);
     void drainCommands();
