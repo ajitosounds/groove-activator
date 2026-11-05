@@ -215,29 +215,51 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: parts
-      - name: Put everything in one folder
+      - name: Make the Retail and Complimentary folders
         run: |
-          D="AJT JOY16"
-          mkdir -p "$D/Mac" "$D/Windows" "$D/個別のファイル/Mac" "$D/個別のファイル/Windows"
-          cp parts/installer-mac/*.pkg "$D/Mac/"
-          cp parts/installer-windows/*.exe "$D/Windows/"
-          cp parts/app-mac/*.dmg parts/plugin-mac/*.zip "$D/個別のファイル/Mac/"
-          cp parts/app-windows/*.exe parts/plugin-windows/*.zip "$D/個別のファイル/Windows/"
-          cp vcs3-app/README-DIST.txt "$D/はじめにお読みください.txt"
-          find "$D" -type f -exec ls -l {} \;
+          set -e
+          V=$(node -p "require('./vcs3-app/package.json').version")
+          DAY=$(TZ=Asia/Tokyo date +%Y%m%d)
+          mkdir -p out
+          for KIND in Retail Complimentary; do
+            D="out/AJITO_SOUNDS_AJT_JOY16_v${V}_${KIND}_${DAY}"
+            mkdir -p "$D"
+            # no serial system yet: both editions carry the same installers, only the README greeting differs
+            cp parts/installer-mac/*.pkg "$D/AJITO_SOUNDS_AJT_JOY16_Mac_v${V}_${DAY}_${KIND}.pkg"
+            cp parts/installer-windows/*.exe "$D/AJITO_SOUNDS_AJT_JOY16_Win_v${V}_${DAY}_${KIND}.exe"
+            if [ "$KIND" = Retail ]; then
+              JA="お求めいただき、ありがとうございます。"; EN="Thank you for your purchase."
+            else
+              JA="AJITO SOUNDS からの贈呈版です。どうぞお楽しみください。"; EN="This is a complimentary copy from AJITO SOUNDS. Enjoy."
+            fi
+            sed -e "s/VERSION/${V}/" -e "s/__GREETING__/${JA}/" installer/dist/README_ja.txt > "$D/README_はじめに.txt"
+            sed -e "s/VERSION/${V}/" -e "s/__GREETING__/${EN}/" installer/dist/README_en.txt > "$D/README_EN.txt"
+            (cd "$D" && sha256sum *.pkg *.exe > SHA256.txt)
+            {
+              echo "AJT JOY16 v${V}  ${KIND}  $(TZ=Asia/Tokyo date +%F) (Mac + Windows)"
+              echo "source: ${GITHUB_REPOSITORY}@${GITHUB_SHA::7} (${GITHUB_REF_NAME}), build run ${GITHUB_RUN_ID}"
+              echo "contents: AJT JOY16 (instrument, AU aumu Jy16 Ajts / VST3) + AJT JOY16 FX (Audio FX, AU aumf Jy1F Ajts / VST3) + desktop app"
+              echo "checks: macOS binaries minos <= 11 (arm64, x86_64); auval -v on both AUs = pass; ad-hoc signed, not notarized"
+              echo "serial: none (Retail and Complimentary installers are identical)"
+            } > "$D/BUILT_FROM.txt"
+          done
+          find out -type f -exec ls -l {} \;
       - uses: actions/upload-artifact@v4
         with:
-          name: AJT-JOY16
-          path: AJT JOY16
+          name: AJT-JOY16-Retail-Complimentary
+          path: out
           if-no-files-found: error
-      - name: Upload to Dropbox
+      - name: Upload to Dropbox (ファミリー ルーム)
         env:
           DROPBOX_APP_KEY: ${{ secrets.DROPBOX_APP_KEY }}
           DROPBOX_APP_SECRET: ${{ secrets.DROPBOX_APP_SECRET }}
           DROPBOX_REFRESH_TOKEN: ${{ secrets.DROPBOX_REFRESH_TOKEN }}
         run: |
           if [ -z "$DROPBOX_REFRESH_TOKEN" ]; then
-            echo "::notice::Dropbox secrets are not set; the folder is only in the AJT-JOY16 artifact."
+            echo "::notice::Dropbox secrets are not set; the folders are only in the AJT-JOY16-Retail-Complimentary artifact."
             exit 0
           fi
-          python3 .github/scripts/dropbox_upload.py "AJT JOY16" "/ファミリー ルーム/AJT JOY16"
+          for D in out/*/; do
+            N=$(basename "$D")
+            python3 .github/scripts/dropbox_upload.py "$D" "/ファミリー ルーム/$N"
+          done
