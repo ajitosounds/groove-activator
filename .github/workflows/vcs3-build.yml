@@ -68,7 +68,7 @@ jobs:
           mkdir -p ~/Library/Audio/Plug-Ins/Components
           cp -R "$A/AU/VCS3 Pin Matrix.component" ~/Library/Audio/Plug-Ins/Components/
           killall -9 AudioComponentRegistrar 2>/dev/null || true
-          auval -v aumu V3pm Gacl
+          auval -v aumu V3pm Ajts
           mkdir out
           cp -R "$A/VST3/VCS3 Pin Matrix.vst3" "$A/AU/VCS3 Pin Matrix.component" "$A/Standalone/VCS3 Pin Matrix.app" out/
           cp vcs3-plugin/INSTALL.txt out/

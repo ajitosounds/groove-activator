@@ -19,9 +19,9 @@ endif()
 
 juce_add_plugin(VCS3PinMatrix
   PRODUCT_NAME "VCS3 Pin Matrix"
-  COMPANY_NAME "Groove Activators Club"
-  BUNDLE_ID club.grooveactivators.vcs3pinmatrix
-  PLUGIN_MANUFACTURER_CODE Gacl
+  COMPANY_NAME "AJITO SOUNDS"
+  BUNDLE_ID com.ajitosounds.vcs3pinmatrix
+  PLUGIN_MANUFACTURER_CODE Ajts
   PLUGIN_CODE V3pm
   FORMATS ${VCS3_FORMATS}
   IS_SYNTH TRUE

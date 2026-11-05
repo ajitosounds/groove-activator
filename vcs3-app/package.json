@@ -3,7 +3,7 @@
   "productName": "VCS3 Pin Matrix",
   "version": "1.1.0",
   "description": "A VCS3-style synthesizer with a 16x16 pin matrix (Original and Advanced editions)",
-  "author": "Groove Activators Club",
+  "author": "AJITO SOUNDS",
   "license": "UNLICENSED",
   "private": true,
   "main": "main.js",
@@ -19,7 +19,7 @@
     "electron-builder": "25.1.8"
   },
   "build": {
-    "appId": "club.grooveactivators.vcs3pinmatrix",
+    "appId": "com.ajitosounds.vcs3pinmatrix",
     "productName": "VCS3 Pin Matrix",
     "files": [
       "main.js",
