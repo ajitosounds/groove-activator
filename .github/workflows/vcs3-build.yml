@@ -1,8 +1,9 @@
 # Builds everything for AJT JOY16 and puts it in one folder:
 #   AJT JOY16/
 #     はじめにお読みください.txt
-#     Mac/      app installer (.dmg) and plugin zip (VST3, AU, Standalone)
-#     Windows/  app installer (.exe) and plugin zip (VST3, Standalone)
+#     Mac/      all-in-one installer (.pkg: app, AU, VST3)
+#     Windows/  all-in-one installer (.exe: app, VST3)
+#     個別のファイル/  the separate app installers and plugin zips
 # The folder is attached to the run as the artifact "AJT-JOY16", and uploaded to Dropbox
 # ("/ファミリー ルーム/AJT JOY16", the family's shared Family Room) when the DROPBOX_APP_KEY, DROPBOX_APP_SECRET and DROPBOX_REFRESH_TOKEN secrets are set.
 name: AJT JOY16 build
@@ -107,8 +108,90 @@ jobs:
           path: AJT-JOY16-Plugin-Windows.zip
           if-no-files-found: error
 
+  installer-mac:
+    needs: [plugin-mac]
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build the app bundle
+        working-directory: vcs3-app
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: |
+          npm ci
+          npm run sync
+          npx electron-builder --mac dir --universal
+      - uses: actions/download-artifact@v4
+        with:
+          name: plugin-mac
+          path: parts
+      - name: Build the all-in-one .pkg
+        run: |
+          set -e
+          V=$(node -p "require('./vcs3-app/package.json').version")
+          APP=$(find vcs3-app/dist -maxdepth 2 -name "AJT JOY16.app" | head -1)
+          (cd parts && unzip -q AJT-JOY16-Plugin-macOS.zip -d plug)
+          mkdir -p stage/app/Applications stage/au/Library/Audio/Plug-Ins/Components stage/vst3/Library/Audio/Plug-Ins/VST3 pk
+          cp -R "$APP" stage/app/Applications/
+          cp -R "parts/plug/AJT JOY16.component" stage/au/Library/Audio/Plug-Ins/Components/
+          cp -R "parts/plug/AJT JOY16.vst3" stage/vst3/Library/Audio/Plug-Ins/VST3/
+          for c in app au vst3; do
+            # keep bundles where we put them (no relocation to copies found elsewhere)
+            pkgbuild --analyze --root "stage/$c" "pk/$c.plist"
+            n=$(/usr/libexec/PlistBuddy -c "Print" "pk/$c.plist" | grep -c "RootRelativeBundlePath" || true)
+            for i in $(seq 0 $((n-1))); do /usr/libexec/PlistBuddy -c "Set :$i:BundleIsRelocatable false" "pk/$c.plist"; done
+            pkgbuild --root "stage/$c" --component-plist "pk/$c.plist" --identifier "com.ajitosounds.joy16.$c" --version "$V" --install-location / "pk/$c.pkg"
+          done
+          sed "s/VERSION/$V/g" installer/mac/distribution.xml > pk/distribution.xml
+          productbuild --distribution pk/distribution.xml --resources installer/mac/resources --package-path pk "AJT-JOY16-Installer-$V.pkg"
+          pkgutil --check-signature "AJT-JOY16-Installer-$V.pkg" || true
+          pkgutil --payload-files "pk/au.pkg" | head
+          ls -l AJT-JOY16-Installer-*.pkg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-mac
+          path: AJT-JOY16-Installer-*.pkg
+          if-no-files-found: error
+
+  installer-windows:
+    needs: [plugin-windows]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build the app folder
+        working-directory: vcs3-app
+        run: |
+          npm ci
+          npm run sync
+          npx electron-builder --win dir --x64
+      - uses: actions/download-artifact@v4
+        with:
+          name: plugin-windows
+          path: parts
+      - name: Build the all-in-one installer
+        shell: pwsh
+        run: |
+          $V = node -p "require('./vcs3-app/package.json').version"
+          Expand-Archive parts/AJT-JOY16-Plugin-Windows.zip -DestinationPath parts/plug
+          choco install innosetup -y --no-progress
+          $iscc = Get-ChildItem "C:\Program Files (x86)\Inno Setup *\ISCC.exe" | Select-Object -First 1
+          & $iscc.FullName "/DAppVersion=$V" "/DAppDir=$PWD\vcs3-app\dist\win-unpacked" "/DVst3Dir=$PWD\parts\plug\AJT JOY16.vst3" "/O$PWD" installer/windows/joy16.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Get-ChildItem AJT-JOY16-Installer-*.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-windows
+          path: AJT-JOY16-Installer-*.exe
+          if-no-files-found: error
+
   bundle:
-    needs: [app, plugin-mac, plugin-windows]
+    needs: [app, plugin-mac, plugin-windows, installer-mac, installer-windows]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -118,11 +201,11 @@ jobs:
       - name: Put everything in one folder
         run: |
           D="AJT JOY16"
-          mkdir -p "$D/Mac" "$D/Windows"
-          cp parts/app-mac/*.dmg "$D/Mac/"
-          cp parts/plugin-mac/*.zip "$D/Mac/"
-          cp parts/app-windows/*.exe "$D/Windows/"
-          cp parts/plugin-windows/*.zip "$D/Windows/"
+          mkdir -p "$D/Mac" "$D/Windows" "$D/個別のファイル/Mac" "$D/個別のファイル/Windows"
+          cp parts/installer-mac/*.pkg "$D/Mac/"
+          cp parts/installer-windows/*.exe "$D/Windows/"
+          cp parts/app-mac/*.dmg parts/plugin-mac/*.zip "$D/個別のファイル/Mac/"
+          cp parts/app-windows/*.exe parts/plugin-windows/*.zip "$D/個別のファイル/Windows/"
           cp vcs3-app/README-DIST.txt "$D/はじめにお読みください.txt"
           find "$D" -type f -exec ls -l {} \;
       - uses: actions/upload-artifact@v4

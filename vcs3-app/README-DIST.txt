@@ -3,23 +3,29 @@ AJT JOY16
 AJITO SOUNDS
 
 16 × 16 のピンマトリクスとジョイスティックで音を組み立てるシンセサイザーです。
-このフォルダには、Mac 用と Windows 用の 2 種類が入っています。
 
-Mac/
-  AJT-JOY16-<版>.dmg
-    単体のアプリです。開いて「AJT JOY16」をアプリケーションフォルダへドラッグしてください。
-    オリジナルと Advanced を「版」メニュー（⌘1 / ⌘2）で切り替えられます。
-  AJT-JOY16-Plugin-macOS.zip
-    DAW 用のプラグイン（Advanced 版）。VST3・AU・単体アプリが入っています。入れ方は中の INSTALL.txt を見てください。
+■ 入れ方（ふつうはこれだけ）
+  Mac:     「Mac」フォルダの AJT-JOY16-Installer-<版>.pkg をダブルクリック
+  Windows: 「Windows」フォルダの AJT-JOY16-Installer-<版>.exe をダブルクリック
 
-Windows/
-  AJT-JOY16-Setup-<版>.exe
-    単体のアプリのインストーラーです。オリジナルと Advanced を「版」メニュー（Ctrl+1 / Ctrl+2）で切り替えられます。
-  AJT-JOY16-Plugin-Windows.zip
-    DAW 用のプラグイン（Advanced 版）。VST3・単体アプリが入っています。入れ方は中の INSTALL.txt を見てください。
+  画面の案内どおりに進めると、次のものがまとめて入ります（途中で選ぶこともできます）。
+    アプリ           Mac: アプリケーション / Windows: スタートメニューとデスクトップ
+    AU プラグイン     Mac のみ。Logic などで「AJITO SOUNDS」→「AJT JOY16」
+    VST3 プラグイン   Ableton Live、Cubase などで「AJITO SOUNDS」→「AJT JOY16」
+  アプリは「版」メニュー（Mac ⌘1 / ⌘2、Windows Ctrl+1 / Ctrl+2）でオリジナルと Advanced を切り替えられます。
+  DAW をお使いなら、入れた後に DAW を起動し直してください。
 
-はじめて開くとき
+■ はじめて開くとき
   Apple の公証・Windows のコード署名をしていないので、警告が出ます。
-  Mac: 右クリック →「開く」。「壊れている」と出たら、ターミナルで
-       xattr -cr "/Applications/AJT JOY16.app"
+  Mac:     .pkg を右クリック →「開く」→「開く」。
+           それでも開けないときは「システム設定」→「プライバシーとセキュリティ」の下の方で「このまま開く」。
   Windows: SmartScreen で「詳細情報」→「実行」。
+
+■ 個別のファイル
+  インストーラーを使わずに入れたい人向けです（アプリだけの .dmg / .exe と、プラグインの zip）。
+  プラグインの zip の入れ方は、中の INSTALL.txt を見てください。
+
+■ 消すとき
+  Mac:     アプリケーションの「AJT JOY16」と、
+           /Library/Audio/Plug-Ins/Components/AJT JOY16.component、/Library/Audio/Plug-Ins/VST3/AJT JOY16.vst3 をゴミ箱へ。
+  Windows: 「設定」→「アプリ」から「AJT JOY16」をアンインストール。

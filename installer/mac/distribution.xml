@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- AJT JOY16 all-in-one macOS installer. VERSION is filled in by the build workflow. -->
+<installer-gui-script minSpecVersion="2">
+  <title>AJT JOY16</title>
+  <organization>com.ajitosounds</organization>
+  <welcome file="welcome.html" mime-type="text/html"/>
+  <conclusion file="conclusion.html" mime-type="text/html"/>
+  <options customize="allow" require-scripts="false" hostArchitectures="arm64,x86_64"/>
+  <domains enable_localSystem="true"/>
+  <choices-outline>
+    <line choice="app"/>
+    <line choice="au"/>
+    <line choice="vst3"/>
+  </choices-outline>
+  <choice id="app" title="AJT JOY16 アプリ" description="単体で動くアプリ（オリジナル / Advanced）。アプリケーションフォルダに入ります。">
+    <pkg-ref id="com.ajitosounds.joy16.app"/>
+  </choice>
+  <choice id="au" title="AU プラグイン" description="Logic などで使う Audio Unit。/Library/Audio/Plug-Ins/Components に入ります。">
+    <pkg-ref id="com.ajitosounds.joy16.au"/>
+  </choice>
+  <choice id="vst3" title="VST3 プラグイン" description="Ableton Live、Cubase などで使う VST3。/Library/Audio/Plug-Ins/VST3 に入ります。">
+    <pkg-ref id="com.ajitosounds.joy16.vst3"/>
+  </choice>
+  <pkg-ref id="com.ajitosounds.joy16.app" version="VERSION" onConclusion="none">app.pkg</pkg-ref>
+  <pkg-ref id="com.ajitosounds.joy16.au" version="VERSION" onConclusion="none">au.pkg</pkg-ref>
+  <pkg-ref id="com.ajitosounds.joy16.vst3" version="VERSION" onConclusion="none">vst3.pkg</pkg-ref>
+</installer-gui-script>
