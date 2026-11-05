@@ -57,12 +57,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Configure
-        run: cmake -S vcs3-plugin -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+        run: cmake -S vcs3-plugin -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
       - name: Build
         run: cmake --build build --config Release --parallel 4
       - name: Sign (ad-hoc), check the AU, package
         run: |
           A="build/VCS3PinMatrix_artefacts/Release"
+          # every binary must run on macOS 11+, not only on the runner's own macOS
+          for b in "$A/AU/AJT JOY16.component/Contents/MacOS/AJT JOY16" "$A/VST3/AJT JOY16.vst3/Contents/MacOS/AJT JOY16" "$A/Standalone/AJT JOY16.app/Contents/MacOS/AJT JOY16"; do
+            for arch in arm64 x86_64; do
+              m=$(vtool -arch $arch -show-build "$b" | awk '/minos/{print $2}')
+              echo "$b [$arch] minos=$m"
+              [ "${m%%.*}" -le 11 ] || { echo "binary requires macOS $m"; exit 1; }
+            done
+          done
           for f in "$A/VST3/AJT JOY16.vst3" "$A/AU/AJT JOY16.component" "$A/Standalone/AJT JOY16.app"; do
             codesign --force --deep --sign - "$f"
           done

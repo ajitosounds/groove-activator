@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.22)
-project(VCS3PinMatrix VERSION 1.2.0)
+# must be set before project(); otherwise the build targets the runner's own macOS
+# (a binary built on macOS 26 then fails to load on older systems)
+set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum macOS version")
+project(VCS3PinMatrix VERSION 1.2.1)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-if(APPLE)
-  set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "")
-endif()
 
 # JUCE 8 (set FETCHCONTENT_SOURCE_DIR_JUCE to use a local checkout)
 include(FetchContent)
