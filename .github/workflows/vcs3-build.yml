@@ -141,8 +141,12 @@ jobs:
           for c in app au vst3; do
             # keep bundles where we put them (no relocation to copies found elsewhere)
             pkgbuild --analyze --root "stage/$c" "pk/$c.plist"
-            n=$(/usr/libexec/PlistBuddy -c "Print" "pk/$c.plist" | grep -c "RootRelativeBundlePath" || true)
-            for i in $(seq 0 $((n-1))); do /usr/libexec/PlistBuddy -c "Set :$i:BundleIsRelocatable false" "pk/$c.plist"; done
+            # top-level entries only (nested bundles are listed under ChildBundles, not as array items)
+            i=0
+            while /usr/libexec/PlistBuddy -c "Print :$i" "pk/$c.plist" >/dev/null 2>&1; do
+              /usr/libexec/PlistBuddy -c "Set :$i:BundleIsRelocatable false" "pk/$c.plist"
+              i=$((i+1))
+            done
             pkgbuild --root "stage/$c" --component-plist "pk/$c.plist" --identifier "com.ajitosounds.joy16.$c" --version "$V" --install-location / "pk/$c.pkg"
           done
           sed "s/VERSION/$V/g" installer/mac/distribution.xml > pk/distribution.xml
