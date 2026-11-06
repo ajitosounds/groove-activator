@@ -7,7 +7,7 @@ This installer adds AJT JOY16, a synthesizer you build with a 16 x 16 pin matrix
 and its effect edition, AJT JOY16 FX.
 
 - What is installed
-  Plug-ins (AU, VST3)
+  Plug-ins (AU, VST3, AAX for Pro Tools on Mac)
     AJT JOY16     ... instrument (insert on a software instrument track)
     AJT JOY16 FX  ... effect (insert in an audio track's Audio FX slot)
   Standalone app "AJT JOY16" ... switch between the Original edition (as the 1970 unit) and the
@@ -19,11 +19,11 @@ and its effect edition, AJT JOY16 FX.
 
 - Installing
   Mac:     double-click the AJITO_SOUNDS_AJT_JOY16_Mac_... .pkg and follow the steps (an administrator password is needed).
-           The installer is not notarized: if macOS warns you, right-click the .pkg > Open > Open.
   Windows: double-click the AJITO_SOUNDS_AJT_JOY16_Win_... .exe. If SmartScreen appears, choose More info > Run anyway.
   Restart your DAW afterwards.
     Logic ... instrument: AU Instruments > AJITO SOUNDS > AJT JOY16
               effect: Audio FX > AJITO SOUNDS > AJT JOY16 FX
+    Pro Tools ... AJITO SOUNDS in the plug-in menus
     Ableton Live, Cubase and others ... VST3 > AJITO SOUNDS
 
 - AJT JOY16 FX in short
@@ -35,6 +35,7 @@ and its effect edition, AJT JOY16 FX.
 - Where things go (delete these to uninstall)
   Mac:     /Library/Audio/Plug-Ins/Components/AJT JOY16.component and AJT JOY16 FX.component
            /Library/Audio/Plug-Ins/VST3/AJT JOY16.vst3 and AJT JOY16 FX.vst3
+           /Library/Application Support/Avid/Audio/Plug-Ins/AJT JOY16.aaxplugin and AJT JOY16 FX.aaxplugin
            /Applications/AJT JOY16.app
   Windows: Settings > Apps > AJT JOY16 > Uninstall
 

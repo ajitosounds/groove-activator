@@ -11,6 +11,7 @@
     <line choice="app"/>
     <line choice="au"/>
     <line choice="vst3"/>
+    <line choice="aax"/> <!-- aax -->
   </choices-outline>
   <choice id="app" title="AJT JOY16 アプリ" description="単体で動くアプリ（オリジナル / Advanced）。アプリケーションフォルダに入ります。">
     <pkg-ref id="com.ajitosounds.joy16.app"/>
@@ -21,6 +22,10 @@
   <choice id="vst3" title="VST3 プラグイン" description="Ableton Live、Cubase などで使う VST3（AJT JOY16 と AJT JOY16 FX）。/Library/Audio/Plug-Ins/VST3 に入ります。">
     <pkg-ref id="com.ajitosounds.joy16.vst3"/>
   </choice>
+  <choice id="aax" title="AAX プラグイン（Pro Tools）" description="Pro Tools で使う AAX（AJT JOY16 と AJT JOY16 FX）。/Library/Application Support/Avid/Audio/Plug-Ins に入ります。"> <!-- aax -->
+    <pkg-ref id="com.ajitosounds.joy16.aax"/> <!-- aax -->
+  </choice> <!-- aax -->
+  <pkg-ref id="com.ajitosounds.joy16.aax" version="VERSION" onConclusion="none">aax.pkg</pkg-ref> <!-- aax -->
   <pkg-ref id="com.ajitosounds.joy16.app" version="VERSION" onConclusion="none">app.pkg</pkg-ref>
   <pkg-ref id="com.ajitosounds.joy16.au" version="VERSION" onConclusion="none">au.pkg</pkg-ref>
   <pkg-ref id="com.ajitosounds.joy16.vst3" version="VERSION" onConclusion="none">vst3.pkg</pkg-ref>

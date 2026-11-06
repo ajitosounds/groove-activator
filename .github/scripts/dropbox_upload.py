@@ -1,9 +1,9 @@
 """Uploads a folder to Dropbox, replacing files that are already there.
 
 Needs DROPBOX_APP_KEY, DROPBOX_APP_SECRET and DROPBOX_REFRESH_TOKEN in the environment.
-Usage: python dropbox_upload.py <local folder> <dropbox folder, e.g. "/AJT JOY16">
+Usage: python dropbox_upload.py <local folder> <dropbox folder, e.g. "/AJT JOY16"> [glob to skip ...]
 """
-import json, os, sys, urllib.parse, urllib.request, base64
+import fnmatch, json, os, sys, urllib.parse, urllib.request, base64
 
 CHUNK = 64 * 1024 * 1024  # files over 150 MB must use an upload session
 
@@ -35,14 +35,16 @@ def upload(tok, local, remote):
                 call(tok, 'files/upload_session/finish', {'cursor': {'session_id': sid, 'offset': offset}, 'commit': commit}, chunk); return
             call(tok, 'files/upload_session/append_v2', {'cursor': {'session_id': sid, 'offset': offset}, 'close': False}, chunk)
 
-def main(src, dest):
+def main(src, dest, skip=()):
     tok = token()
     for root, _, files in os.walk(src):
         for name in sorted(files):
+            if any(fnmatch.fnmatch(name, g) for g in skip):
+                print('skip', name, flush=True); continue
             local = os.path.join(root, name)
             remote = dest.rstrip('/') + '/' + os.path.relpath(local, src).replace(os.sep, '/')
             print('upload', remote, os.path.getsize(local), 'bytes', flush=True)
             upload(tok, local, remote)
 
 if __name__ == '__main__':
-    main(sys.argv[1], sys.argv[2])
+    main(sys.argv[1], sys.argv[2], sys.argv[3:])

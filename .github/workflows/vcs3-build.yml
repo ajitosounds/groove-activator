@@ -57,7 +57,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Configure
-        run: cmake -S vcs3-plugin -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+        run: cmake -S vcs3-plugin -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 -DJOY16_WITH_AAX=ON
       - name: Build
         run: cmake --build build --config Release --parallel 4
       - name: Sign (ad-hoc), check the AU, package
@@ -162,7 +162,8 @@ jobs:
             done
             pkgbuild --root "stage/$c" --component-plist "pk/$c.plist" --identifier "com.ajitosounds.joy16.$c" --version "$V" --install-location / "pk/$c.pkg"
           done
-          sed "s/VERSION/$V/g" installer/mac/distribution.xml > pk/distribution.xml
+          # CI cannot PACE-sign, so its test .pkg has no AAX; installer/mac/release_mac.sh adds it on Gota's Mac
+          sed -e "s/VERSION/$V/g" -e '/<!-- aax -->/d' installer/mac/distribution.xml > pk/distribution.xml
           productbuild --distribution pk/distribution.xml --resources installer/mac/resources --package-path pk "AJT-JOY16-Installer-$V.pkg"
           pkgutil --check-signature "AJT-JOY16-Installer-$V.pkg" || true
           pkgutil --payload-files "pk/au.pkg" | head
@@ -239,7 +240,9 @@ jobs:
               echo "AJT JOY16 v${V}  ${KIND}  $(TZ=Asia/Tokyo date +%F) (Mac + Windows)"
               echo "source: ${GITHUB_REPOSITORY}@${GITHUB_SHA::7} (${GITHUB_REF_NAME}), build run ${GITHUB_RUN_ID}"
               echo "contents: AJT JOY16 (instrument, AU aumu Jy16 Ajts / VST3) + AJT JOY16 FX (Audio FX, AU aumf Jy1F Ajts / VST3) + desktop app"
-              echo "checks: macOS binaries minos <= 11 (arm64, x86_64); auval -v on both AUs = pass; ad-hoc signed, not notarized"
+              echo "checks: macOS binaries minos <= 11 (arm64, x86_64); auval -v on both AUs = pass"
+              echo "Mac .pkg: in Dropbox it comes from installer/mac/release_mac.sh on Gota's Mac (Developer ID, PACE-signed AAX, notarized);"
+              echo "          the .pkg in this GitHub artifact is an ad-hoc signed test build without AAX"
               echo "serial: none (Retail and Complimentary installers are identical)"
             } > "$D/BUILT_FROM.txt"
           done
@@ -261,5 +264,6 @@ jobs:
           fi
           for D in out/*/; do
             N=$(basename "$D")
-            python3 .github/scripts/dropbox_upload.py "$D" "/ファミリー ルーム/$N"
+            # the Mac .pkg is signed, PACE-wrapped and notarized on Gota's Mac (installer/mac/release_mac.sh), never from here
+            python3 .github/scripts/dropbox_upload.py "$D" "/ファミリー ルーム/$N" '*.pkg' SHA256.txt BUILT_FROM.txt
           done
