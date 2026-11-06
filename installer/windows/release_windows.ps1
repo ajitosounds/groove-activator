@@ -181,7 +181,10 @@ Set-Location (P @($repo, "vcs3-app"))
 if ((Run "npm.cmd" @("ci")) -ne 0)            { Die "npm ci に失敗" }
 if ((Run "npm.cmd" @("run", "sync")) -ne 0)   { Die "npm run sync に失敗" }
 $env:CSC_IDENTITY_AUTO_DISCOVERY = "false"
-if ((Run "npx.cmd" @("electron-builder", "--win", "dir", "--x64")) -ne 0) { Die "electron-builder に失敗" }
+# signAndEditExecutable=false: electron-builder would otherwise unpack its winCodeSign kit,
+# whose macOS symlinks need admin rights or Developer Mode ("クライアントは要求された特権を
+# 保有していません"). We sign the installer with Certum ourselves, so the kit is not needed.
+if ((Run "npx.cmd" @("electron-builder", "--win", "dir", "--x64", "-c.win.signAndEditExecutable=false")) -ne 0) { Die "electron-builder に失敗" }
 Set-Location $repo
 $appDir = P @($repo, "vcs3-app", "dist", "win-unpacked")
 if (-not (Test-Path (P @($appDir, "AJT JOY16.exe")))) { Die "AJT JOY16.exe ができていません" }
