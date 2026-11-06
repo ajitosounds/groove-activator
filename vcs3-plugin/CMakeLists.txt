@@ -13,8 +13,22 @@ FetchContent_Declare(JUCE GIT_REPOSITORY https://github.com/juce-framework/JUCE.
 FetchContent_MakeAvailable(JUCE)
 
 set(VCS3_FORMATS VST3 Standalone)
+set(FX_FORMATS VST3)
 if(APPLE)
   list(APPEND VCS3_FORMATS AU)
+  list(APPEND FX_FORMATS AU)
+endif()
+
+# AAX (Pro Tools): off unless -DJOY16_WITH_AAX=ON. JUCE 8 ships the AAX SDK (JOY16_AAX_SDK picks another).
+# Retail Pro Tools loads it only after PACE signing (wraptool + iLok) on Gota's Mac, so it stays off for now.
+option(JOY16_WITH_AAX "Build the AAX plug-ins" OFF)
+set(JOY16_AAX_SDK "" CACHE PATH "AAX SDK folder; empty = the one bundled with JUCE")
+if(JOY16_WITH_AAX)
+  if(JOY16_AAX_SDK)
+    juce_set_aax_sdk_path("${JOY16_AAX_SDK}")
+  endif()
+  list(APPEND VCS3_FORMATS AAX)
+  list(APPEND FX_FORMATS AAX)
 endif()
 
 # two editions from one source: AJT JOY16 (instrument) and AJT JOY16 FX (Audio FX: the track's audio feeds the INPUT rows)
@@ -24,7 +38,7 @@ juce_add_binary_data(VCS3PinMatrixData SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/Resources/default_snapshot_fx.json)
 
 function(joy16_edition target)
-  cmake_parse_arguments(E "" "NAME;BUNDLE;CODE;SYNTH;AUTYPE;FX" "FORMATS;VST3CAT" ${ARGN})
+  cmake_parse_arguments(E "" "NAME;BUNDLE;CODE;SYNTH;AUTYPE;FX;AAXCAT" "FORMATS;VST3CAT" ${ARGN})
   juce_add_plugin(${target}
     PRODUCT_NAME "${E_NAME}"
     COMPANY_NAME "AJITO SOUNDS"
@@ -41,6 +55,7 @@ function(joy16_edition target)
     NEEDS_WEBVIEW2 TRUE
     VST3_CATEGORIES ${E_VST3CAT}
     AU_MAIN_TYPE ${E_AUTYPE}
+    AAX_CATEGORY ${E_AAXCAT}
     COPY_PLUGIN_AFTER_BUILD FALSE)
   target_sources(${target} PRIVATE Source/PluginProcessor.cpp Source/PluginEditor.cpp)
   target_compile_definitions(${target} PUBLIC
@@ -54,13 +69,8 @@ function(joy16_edition target)
     PUBLIC juce::juce_recommended_config_flags juce::juce_recommended_lto_flags juce::juce_recommended_warning_flags)
 endfunction()
 
-set(FX_FORMATS VST3)
-if(APPLE)
-  list(APPEND FX_FORMATS AU)
-endif()
-
 joy16_edition(VCS3PinMatrix NAME "AJT JOY16" BUNDLE com.ajitosounds.joy16 CODE Jy16 SYNTH TRUE
-  AUTYPE kAudioUnitType_MusicDevice FX 0 FORMATS ${VCS3_FORMATS} VST3CAT Instrument Synth)
+  AUTYPE kAudioUnitType_MusicDevice FX 0 AAXCAT AAX_ePlugInCategory_SWGenerators FORMATS ${VCS3_FORMATS} VST3CAT Instrument Synth)
 # kAudioUnitType_MusicEffect: an Audio FX that also takes MIDI (Logic: Audio FX slot, MIDI via the plug-in's side chain menu)
 joy16_edition(JOY16FX NAME "AJT JOY16 FX" BUNDLE com.ajitosounds.joy16fx CODE Jy1F SYNTH FALSE
-  AUTYPE kAudioUnitType_MusicEffect FX 1 FORMATS ${FX_FORMATS} VST3CAT Fx)
+  AUTYPE kAudioUnitType_MusicEffect FX 1 AAXCAT AAX_ePlugInCategory_Modulation FORMATS ${FX_FORMATS} VST3CAT Fx)
