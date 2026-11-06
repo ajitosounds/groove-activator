@@ -7,7 +7,7 @@ __GREETING__
 「AJT JOY16」と、そのエフェクト版「AJT JOY16 FX」がまとめて入ります。
 
 ■ 入る物
-  プラグイン（AU・VST3・AAX〔Pro Tools 用、Mac のみ〕）
+  プラグイン（AU〔Mac〕・VST3・AAX〔Pro Tools 用〕）
     AJT JOY16     … 音源（ソフトウェア音源トラックに挿します）
     AJT JOY16 FX  … エフェクト（オーディオトラックの Audio FX に挿します）
   単体アプリ「AJT JOY16」 … オリジナル版（1970 年の実機どおり）と Advanced 版を切り替えて使えます
@@ -19,7 +19,8 @@ __GREETING__
 
 ■ 入れ方
   Mac:     AJITO_SOUNDS_AJT_JOY16_Mac_… .pkg をダブルクリックして、画面のとおりに進めます（管理者のパスワードが要ります）。
-  Windows: AJITO_SOUNDS_AJT_JOY16_Win_… .exe をダブルクリック。SmartScreen が出たら「詳細情報」→「実行」。
+  Windows: AJITO_SOUNDS_AJT_JOY16_Win_… .exe をダブルクリックして、画面のとおりに進めます。
+           （SmartScreen が出たら「詳細情報」→「実行」）
   入れ終わったら、DAW を開き直してください。
     Logic … 音源: AU 音源 ＞ AJITO SOUNDS ＞ AJT JOY16
             エフェクト: Audio FX ＞ AJITO SOUNDS ＞ AJT JOY16 FX
@@ -38,7 +39,9 @@ __GREETING__
            /Library/Audio/Plug-Ins/VST3/ の AJT JOY16.vst3 と AJT JOY16 FX.vst3
            /Library/Application Support/Avid/Audio/Plug-Ins/ の AJT JOY16.aaxplugin と AJT JOY16 FX.aaxplugin
            /Applications/AJT JOY16.app
-  Windows: 「設定」→「アプリ」から「AJT JOY16」をアンインストール
+  Windows: C:\Program Files\Common Files\VST3\ の AJT JOY16.vst3 と AJT JOY16 FX.vst3
+           C:\Program Files\Common Files\Avid\Audio\Plug-Ins\ の AJT JOY16.aaxplugin と AJT JOY16 FX.aaxplugin
+           消す時は「設定」→「アプリ」から「AJT JOY16」をアンインストール
 
 ■ お問い合わせ
   gotayashiki.myshopify.com のお問い合わせから。

@@ -1,5 +1,6 @@
 ﻿; AJT JOY16 all-in-one Windows installer (Inno Setup 6).
 ; The build workflow passes /DAppVersion, /DAppDir (Electron app folder), /DVst3Dir (AJT JOY16.vst3 folder) and /DVst3FxDir (AJT JOY16 FX.vst3 folder).
+; installer/windows/release_windows.ps1 also passes /DAaxDir and /DAaxFxDir (the PACE-signed .aaxplugin folders); without them there is no AAX component.
 #define AppName "AJT JOY16"
 #ifndef AppVersion
   #define AppVersion "0.0.0"
@@ -29,12 +30,15 @@ Name: "japanese"; MessagesFile: "compiler:Languages\Japanese.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Types]
-Name: "full"; Description: "すべて（アプリと VST3 プラグイン）"
+Name: "full"; Description: "すべて（アプリとプラグイン）"
 Name: "custom"; Description: "選んで入れる"; Flags: iscustom
 
 [Components]
 Name: "app"; Description: "AJT JOY16 アプリ（オリジナル / Advanced）"; Types: full custom
 Name: "vst3"; Description: "VST3 プラグイン（DAW 用、C:\Program Files\Common Files\VST3）"; Types: full custom
+#ifdef AaxDir
+Name: "aax"; Description: "AAX プラグイン（Pro Tools 用、C:\Program Files\Common Files\Avid\Audio\Plug-Ins）"; Types: full custom
+#endif
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; Components: app
@@ -43,6 +47,10 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; Components: app
 Source: "{#AppDir}\*"; DestDir: "{app}"; Components: app; Flags: recursesubdirs createallsubdirs ignoreversion
 Source: "{#Vst3Dir}\*"; DestDir: "{commoncf64}\VST3\AJT JOY16.vst3"; Components: vst3; Flags: recursesubdirs createallsubdirs ignoreversion
 Source: "{#Vst3FxDir}\*"; DestDir: "{commoncf64}\VST3\AJT JOY16 FX.vst3"; Components: vst3; Flags: recursesubdirs createallsubdirs ignoreversion
+#ifdef AaxDir
+Source: "{#AaxDir}\*"; DestDir: "{commoncf64}\Avid\Audio\Plug-Ins\AJT JOY16.aaxplugin"; Components: aax; Flags: recursesubdirs createallsubdirs ignoreversion
+Source: "{#AaxFxDir}\*"; DestDir: "{commoncf64}\Avid\Audio\Plug-Ins\AJT JOY16 FX.aaxplugin"; Components: aax; Flags: recursesubdirs createallsubdirs ignoreversion
+#endif
 
 [Icons]
 Name: "{group}\AJT JOY16"; Filename: "{app}\AJT JOY16.exe"; Components: app

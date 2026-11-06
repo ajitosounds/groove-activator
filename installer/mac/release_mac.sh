@@ -182,15 +182,17 @@ for KIND in Retail Complimentary; do
   sed -e "s/VERSION/${V}/" -e "s/__GREETING__/${JA}/" "$REPO/installer/dist/README_ja.txt" > "$D/README_はじめに.txt"
   sed -e "s/VERSION/${V}/" -e "s/__GREETING__/${EN}/" "$REPO/installer/dist/README_en.txt" > "$D/README_EN.txt"
   ( cd "$D" && shasum -a 256 *.pkg *.exe 2>/dev/null > SHA256.txt )
+  WINLINE=$(grep '^Windows:' "$D/BUILT_FROM.txt" 2>/dev/null | head -1 || true)
+  [ -n "$WINLINE" ] || WINLINE="Windows: (not in this folder yet - installer/windows/release_windows.ps1 puts it here)"
   {
     echo "AJT JOY16 v${V}  ${KIND}  $(TZ=Asia/Tokyo date +%F)"
     echo "source: groove-activator@$(git -C "$REPO" rev-parse --short HEAD) ($(git -C "$REPO" rev-parse --abbrev-ref HEAD))"
     echo "Mac: built on $(scutil --get ComputerName 2>/dev/null || hostname); AU/VST3/AAX (instrument Jy16 + FX Jy1F) + app;"
     echo "     Developer ID ($TEAM_ID), AAX PACE-wrapped (wcguid $PACE_WCGUID), $( [ "${SKIP_NOTARIZE:-0}" = 1 ] && echo 'NOT notarized' || echo 'notarized + stapled')"
-    echo "Windows: from the GitHub build (VST3 + app; AAX not yet)"
+    echo "$WINLINE"
     echo "serial: none (Retail and Complimentary installers are identical)"
   } > "$D/BUILT_FROM.txt"
-  ls "$D" | grep -q "_Win_" || echo "  ⚠ $(basename "$D") に Windows 版がまだありません（GitHub のビルドが入れます）"
+  ls "$D" | grep -q "_Win_" || echo "  ⚠ $(basename "$D") に Windows 版がまだありません（installer/windows/release_windows.ps1 が入れます）"
   echo "  ✓ $(basename "$D")"
 done
 

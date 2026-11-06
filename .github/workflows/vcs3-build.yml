@@ -4,8 +4,8 @@
 #     Mac/      all-in-one installer (.pkg: app, AU, VST3)
 #     Windows/  all-in-one installer (.exe: app, VST3)
 #     個別のファイル/  the separate app installers and plugin zips
-# The folder is attached to the run as the artifact "AJT-JOY16", and uploaded to Dropbox
-# ("/ファミリー ルーム/AJT JOY16", the family's shared Family Room) when the DROPBOX_APP_KEY, DROPBOX_APP_SECRET and DROPBOX_REFRESH_TOKEN secrets are set.
+# The folders are attached to the run as an artifact (test builds). The signed installers in
+# Dropbox / ファミリー ルーム come from installer/mac/release_mac.sh and installer/windows/release_windows.ps1.
 name: AJT JOY16 build
 
 on:
@@ -101,7 +101,7 @@ jobs:
           Register-PackageSource -ProviderName NuGet -Name nugetRepository -Location https://www.nuget.org/api/v2 -Force
           Install-Package Microsoft.Web.WebView2 -Scope CurrentUser -RequiredVersion 1.0.1901.177 -Source nugetRepository -Force
       - name: Configure
-        run: cmake -S vcs3-plugin -B build -A x64
+        run: cmake -S vcs3-plugin -B build -A x64 -DJOY16_WITH_AAX=ON
       - name: Build
         run: cmake --build build --config Release --parallel 4
       - name: Package
@@ -114,6 +114,21 @@ jobs:
           Copy-Item "$A/Standalone/AJT JOY16.exe" out/
           Copy-Item vcs3-plugin/INSTALL.txt out/
           Compress-Archive -Path out/* -DestinationPath AJT-JOY16-Plugin-Windows.zip
+          # unsigned AAX, only to test the installer's AAX component (Pro Tools needs the PACE-signed one)
+          New-Item -ItemType Directory aaxtest | Out-Null
+          Copy-Item -Recurse "$A/AAX/AJT JOY16.aaxplugin" aaxtest/
+          Copy-Item -Recurse "build/JOY16FX_artefacts/Release/AAX/AJT JOY16 FX.aaxplugin" aaxtest/
+      - name: Check installer/windows/release_windows.ps1 parses (Windows PowerShell 5.1 and pwsh)
+        shell: pwsh
+        run: |
+          $chk = '$e=$null;$t=$null;[void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path "installer/windows/release_windows.ps1"),[ref]$t,[ref]$e);if($e){$e|%{"$($_.Extent.StartLineNumber): $($_.Message)"};exit 1}else{"parse ok"}'
+          powershell -NoProfile -Command $chk; if ($LASTEXITCODE -ne 0) { exit 1 }
+          pwsh -NoProfile -Command $chk;       if ($LASTEXITCODE -ne 0) { exit 1 }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: plugin-windows-aaxtest
+          path: aaxtest
+          if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
           name: plugin-windows
@@ -202,6 +217,18 @@ jobs:
           & $iscc.FullName "/DAppVersion=$V" "/DAppDir=$PWD\vcs3-app\dist\win-unpacked" "/DVst3Dir=$PWD\parts\plug\AJT JOY16.vst3" "/DVst3FxDir=$PWD\parts\plug\AJT JOY16 FX.vst3" "/O$PWD" installer/windows/joy16.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Get-ChildItem AJT-JOY16-Installer-*.exe
+      - uses: actions/download-artifact@v4
+        with:
+          name: plugin-windows-aaxtest
+          path: aaxtest
+      - name: Check the installer script with the AAX component (not shipped)
+        shell: pwsh
+        run: |
+          $V = node -p "require('./vcs3-app/package.json').version"
+          $iscc = Get-ChildItem "C:\Program Files (x86)\Inno Setup *\ISCC.exe" | Select-Object -First 1
+          & $iscc.FullName "/DAppVersion=$V" "/DAppDir=$PWD\vcs3-app\dist\win-unpacked" "/DVst3Dir=$PWD\parts\plug\AJT JOY16.vst3" "/DVst3FxDir=$PWD\parts\plug\AJT JOY16 FX.vst3" "/DAaxDir=$PWD\aaxtest\AJT JOY16.aaxplugin" "/DAaxFxDir=$PWD\aaxtest\AJT JOY16 FX.aaxplugin" "/O$PWD\aaxcheck" installer/windows/joy16.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Get-ChildItem aaxcheck
       - uses: actions/upload-artifact@v4
         with:
           name: installer-windows
@@ -243,6 +270,8 @@ jobs:
               echo "checks: macOS binaries minos <= 11 (arm64, x86_64); auval -v on both AUs = pass"
               echo "Mac .pkg: in Dropbox it comes from installer/mac/release_mac.sh on Gota's Mac (Developer ID, PACE-signed AAX, notarized);"
               echo "          the .pkg in this GitHub artifact is an ad-hoc signed test build without AAX"
+              echo "Win .exe: in Dropbox it comes from installer/windows/release_windows.ps1 (PACE-signed AAX, Certum-signed);"
+              echo "          the .exe in this GitHub artifact is an unsigned test build without AAX"
               echo "serial: none (Retail and Complimentary installers are identical)"
             } > "$D/BUILT_FROM.txt"
           done
@@ -252,18 +281,6 @@ jobs:
           name: AJT-JOY16-Retail-Complimentary
           path: out
           if-no-files-found: error
-      - name: Upload to Dropbox (ファミリー ルーム)
-        env:
-          DROPBOX_APP_KEY: ${{ secrets.DROPBOX_APP_KEY }}
-          DROPBOX_APP_SECRET: ${{ secrets.DROPBOX_APP_SECRET }}
-          DROPBOX_REFRESH_TOKEN: ${{ secrets.DROPBOX_REFRESH_TOKEN }}
-        run: |
-          if [ -z "$DROPBOX_REFRESH_TOKEN" ]; then
-            echo "::notice::Dropbox secrets are not set; the folders are only in the AJT-JOY16-Retail-Complimentary artifact."
-            exit 0
-          fi
-          for D in out/*/; do
-            N=$(basename "$D")
-            # the Mac .pkg is signed, PACE-wrapped and notarized on Gota's Mac (installer/mac/release_mac.sh), never from here
-            python3 .github/scripts/dropbox_upload.py "$D" "/ファミリー ルーム/$N" '*.pkg' SHA256.txt BUILT_FROM.txt
-          done
+      # Nothing goes to Dropbox from here: the installers in the family room are signed on
+      # Gota's machines (installer/mac/release_mac.sh, installer/windows/release_windows.ps1),
+      # and an upload from CI would overwrite them or start a stray dated folder.
