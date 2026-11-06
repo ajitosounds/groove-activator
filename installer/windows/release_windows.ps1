@@ -232,10 +232,25 @@ Step "5/8 インストーラーを焼く（Inno Setup）"
 $outDir = P @($Work, "out")
 if (Test-Path $outDir) { Remove-Item -Recurse -Force $outDir }
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null
-$rc = Run $iscc @("/DAppVersion=$V", "/DAppDir=$appDir", "/DVst3Dir=$vst3", "/DVst3FxDir=$vst3fx",
-                  "/DAaxDir=$($signedAax[0])", "/DAaxFxDir=$($signedAax[1])", "/O$outDir",
-                  (P @($repo, "installer", "windows", "joy16.iss")))
-if ($rc -ne 0) { Die "ISCC に失敗" }
+# Windows PowerShell 5.1 mangles native arguments that contain spaces ("AJT JOY16.vst3"),
+# and ISCC then sees extra script names. Stage everything under names without spaces;
+# the installed names come from joy16.iss, not from these folders.
+$stage = P @($Work, "stage")
+if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
+New-Item -ItemType Directory -Force -Path $stage | Out-Null
+$parts = [ordered]@{ "app" = $appDir; "vst3" = $vst3; "vst3fx" = $vst3fx; "aax" = $signedAax[0]; "aaxfx" = $signedAax[1] }
+foreach ($k in $parts.Keys) {
+    $d = P @($stage, $k)
+    New-Item -ItemType Directory -Force -Path $d | Out-Null
+    Get-ChildItem -Force $parts[$k] | Copy-Item -Recurse -Force -Destination $d   # -Force: hidden desktop.ini / PlugIn.ico too
+}
+$issCopy = P @($stage, "joy16.iss")
+Copy-Item -Force (P @($repo, "installer", "windows", "joy16.iss")) $issCopy
+$args5 = @("/DAppVersion=$V", "/DAppDir=$stage\app", "/DVst3Dir=$stage\vst3", "/DVst3FxDir=$stage\vst3fx",
+           "/DAaxDir=$stage\aax", "/DAaxFxDir=$stage\aaxfx", "/O$outDir", $issCopy)
+foreach ($a in $args5) { if ($a -match " ") { Die "作業フォルダの場所に空白があります: $a（-Work C:\JOY16_build のように空白のない場所を指定）" } }
+$rc = Run $iscc $args5
+if ($rc -ne 0) { "  ISCC $($args5 -join ' ')"; Die "ISCC に失敗" }
 $exe = P @($outDir, "AJT-JOY16-Installer-$V.exe")
 if (-not (Test-Path $exe)) { Die "インストーラーができていません: $exe" }
 $final = P @($outDir, "AJITO_SOUNDS_AJT_JOY16_Win_v${V}_${DAY}.exe")
