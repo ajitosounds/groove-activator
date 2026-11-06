@@ -221,8 +221,8 @@ foreach ($src in @($aax, $aaxfx)) {
     if ($script:LastRc -ne 0) { $out | Select-Object -Last 25; Die "wraptool sign に失敗: $name" }
     $after = (Get-Item $bin).Length
     if ($after -le $before) { Die "署名後も大きさが変わっていません（$before → $after）: $name" }
-    $v = (Cap $wrap @("verify", "--verbose", "--in", $bin)) -join "`n"
-    if ($v -notmatch "The digital signature was verified") { $v; Die "wraptool verify が通りません: $name" }
+    $vout = (Cap $wrap @("verify", "--verbose", "--in", $bin)) -join "`n"
+    if ($vout -notmatch "The digital signature was verified") { $vout; Die "wraptool verify が通りません: $name" }
     "  o $name  {0:N0} → {1:N0} bytes, verified" -f $before, $after
     $signedAax += $t
 }
@@ -240,9 +240,9 @@ if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
 New-Item -ItemType Directory -Force -Path $stage | Out-Null
 $parts = [ordered]@{ "app" = $appDir; "vst3" = $vst3; "vst3fx" = $vst3fx; "aax" = $signedAax[0]; "aaxfx" = $signedAax[1] }
 foreach ($k in $parts.Keys) {
-    $d = P @($stage, $k)
-    New-Item -ItemType Directory -Force -Path $d | Out-Null
-    Get-ChildItem -Force $parts[$k] | Copy-Item -Recurse -Force -Destination $d   # -Force: hidden desktop.ini / PlugIn.ico too
+    $sd = P @($stage, $k)
+    New-Item -ItemType Directory -Force -Path $sd | Out-Null
+    Get-ChildItem -Force $parts[$k] | Copy-Item -Recurse -Force -Destination $sd   # -Force: hidden desktop.ini / PlugIn.ico too
 }
 $issCopy = P @($stage, "joy16.iss")
 Copy-Item -Force (P @($repo, "installer", "windows", "joy16.iss")) $issCopy
