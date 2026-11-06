@@ -248,9 +248,17 @@ $issCopy = P @($stage, "joy16.iss")
 Copy-Item -Force (P @($repo, "installer", "windows", "joy16.iss")) $issCopy
 $args5 = @("/DAppVersion=$V", "/DAppDir=$stage\app", "/DVst3Dir=$stage\vst3", "/DVst3FxDir=$stage\vst3fx",
            "/DAaxDir=$stage\aax", "/DAaxFxDir=$stage\aaxfx", "/O$outDir", $issCopy)
-foreach ($a in $args5) { if ($a -match " ") { Die "作業フォルダの場所に空白があります: $a（-Work C:\JOY16_build のように空白のない場所を指定）" } }
-$rc = Run $iscc $args5
-if ($rc -ne 0) { "  ISCC $($args5 -join ' ')"; Die "ISCC に失敗" }
+# Quote every argument ourselves and hand ISCC one command line (no PowerShell re-quoting).
+"  ISCC に渡すもの:"
+foreach ($a in $args5) { "    [$a]" }
+$cmdLine = ($args5 | ForEach-Object { '"' + ($_ -replace '"', '') + '"' }) -join " "
+$psi = New-Object System.Diagnostics.ProcessStartInfo
+$psi.FileName = $iscc
+$psi.Arguments = $cmdLine
+$psi.UseShellExecute = $false
+$p5 = [System.Diagnostics.Process]::Start($psi)
+$p5.WaitForExit()
+if ($p5.ExitCode -ne 0) { Die "ISCC に失敗（exit $($p5.ExitCode)）" }
 $exe = P @($outDir, "AJT-JOY16-Installer-$V.exe")
 if (-not (Test-Path $exe)) { Die "インストーラーができていません: $exe" }
 $final = P @($outDir, "AJITO_SOUNDS_AJT_JOY16_Win_v${V}_${DAY}.exe")
