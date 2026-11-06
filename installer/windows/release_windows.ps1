@@ -110,8 +110,14 @@ if (-not $NoSign) {
 }
 
 # PACE: iLok + licence
-$lst = (Cap $wrap @("list")) -join "`n"
-if ($lst -notmatch "License Verified") { $lst; Die "wraptool のライセンスが確認できません（iLok は挿さっていますか）" }
+# Groove Activator's Windows bake does not check this up front; "wraptool sign" in step 4
+# is the real test. Here we only show what "wraptool list" says.
+$lst = (Cap $wrap @("list", "--account", $Account)) -join "`n"
+$paceOk = $lst -match "License Verified"
+if (-not $paceOk) {
+    "  ! wraptool list に「License Verified」が出ません（4/8 の署名で確かめます）:"
+    ($lst -split "`n" | Select-Object -Last 8) | ForEach-Object { "      $_" }
+}
 
 # Dropbox family room
 if (-not $SkipDropbox) {
@@ -132,7 +138,7 @@ if (-not $SkipDropbox) {
 
 "  o cmake    : $cmake"
 "  o ISCC     : $iscc"
-"  o wraptool : $wrap   (License Verified)"
+if ($paceOk) { "  o wraptool : $wrap   (License Verified)" } else { "  ? wraptool : $wrap" }
 "  o signtool : $st"
 if ($certum) { "  o Certum   : $($certum.Subject)  $SignThumbprint" } else { "  ! 署名しない（-NoSign）" }
 if (-not $SkipDropbox) { "  o Dropbox  : $FamilyDir" }
