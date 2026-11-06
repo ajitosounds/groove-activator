@@ -47,9 +47,11 @@ struct Spring {
 
 // Diode ladder (Civolani–Fontana style state equations), trapezoidal rule + Newton, 2x oversampled.
 struct DiodeLadder {
-    double sr, h, x[4] = {0, 0, 0, 0}, uPrev = 0; Rng* rng;
+    // No pointer to the voice's Rng is kept: Voices live in a std::vector and move when it grows,
+    // which left a stored pointer aimed at freed memory (heap corruption in the host). The caller passes it in.
+    double sr, h, x[4] = {0, 0, 0, 0}, uPrev = 0;
     static constexpr double ETA = 1.836, W180 = 0.97334;
-    DiodeLadder(double sr_, Rng* r) : sr(sr_), h(1.0 / (2.0 * sr_)), rng(r) {}
+    explicit DiodeLadder(double sr_) : sr(sr_), h(1.0 / (2.0 * sr_)) {}
     void rhs(const double* s, double u, double a, double k, double* out) const {
         const double t0 = std::tanh(u - k * s[3]), t12 = std::tanh(s[1] - s[0]), t23 = std::tanh(s[2] - s[1]),
                      t34 = std::tanh(s[3] - s[2]), t4 = std::tanh(s[3] / 3);
@@ -85,11 +87,11 @@ struct DiodeLadder {
         for (int i = 0; i < 4; ++i) x[i] = y[i];
         uPrev = u;
     }
-    double process(double inp, double fc, double K) {
+    double process(double inp, double fc, double K, Rng& rng) {
         const double fsO = 2 * sr; if (fc > fsO * 0.24) fc = fsO * 0.24;
         const double w = 2 * kPi * fc, warp = std::tan(w * h / 2) / (w * h / 2);
         const double a = w * warp / W180, k = (K + 0.5) * ETA;
-        const double u = inp * 1.2 + rng->bi() * 0.5e-6;
+        const double u = inp * 1.2 + rng.bi() * 0.5e-6;
         const double um = 0.5 * (uPrev + u);
         step(um, a, k); step(u, a, k);
         return (K + 0.5) * x[3] / (0.4 * 1.2);
@@ -125,7 +127,7 @@ struct Voice {
     double dr[3] = {0, 0, 0}, warm[3], pm[3] = {1, 1, 1};
     double L = 0, R = 0, met = 0;
 
-    Voice(double sr_, uint32_t seed) : sr(sr_), rng(seed), vcf(sr_, &rng), sp1(sr_, 25, 16, -0.62), sp2(sr_, 30, 16, -0.58) {
+    Voice(double sr_, uint32_t seed) : sr(sr_), rng(seed), vcf(sr_), sp1(sr_, 25, 16, -0.62), sp2(sr_, 30, 16, -0.58) {
         ph1 = rng.next(); ph2 = rng.next(); ph3 = rng.next(); dkPh = rng.next();
         for (double& w : warm) w = rng.bi();
     }
@@ -175,7 +177,7 @@ struct Voice {
         ring = 3.5 * std::tanh(ring / 3.5);
 
         double fc = c[I.filtF] * std::pow(2.0, -col[FF] / 0.2); if (fc < 5) fc = 5;
-        const double filt = vcf.process(col[FIN] * 0.5, fc, c[I.filtRes] * 0.83) * 2 * c[I.filtLvl] / 10;
+        const double filt = vcf.process(col[FIN] * 0.5, fc, c[I.filtRes] * 0.83, rng) * 2 * c[I.filtLvl] / 10;
 
         if (pend) { pend = false; stage = 1; ht = 0; }
         const bool g = gate || E.hold;
@@ -264,7 +266,7 @@ public:
               ix("dkFreq"), ix("dkSpread"), ix("dkDyn"), ix("dkLvl"), ix("in1Lvl"), ix("in2Lvl"), ix("revMix"), ix("revLvl"),
               ix("out1Lvl"), ix("out1Filt"), ix("out1Pan"), ix("out2Lvl"), ix("out2Filt"), ix("out2Pan"), ix("stkXr"), ix("stkYr"),
               ix("master"), ix("analog"), ix("kbdGlide") };
-        voices.clear();
+        voices.clear(); voices.reserve(MAXV);
         for (int i = 0; i < MAXV; ++i) voices.emplace_back(sr, 0x1234567u + 7919u * (uint32_t) i);
         notes.clear(); notes.reserve(128);
         voices[0].active = true; voices[0].fade = 1;
