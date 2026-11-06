@@ -1,0 +1,286 @@
+# Builds everything for AJT JOY16 and puts it in one folder:
+#   AJT JOY16/
+#     はじめにお読みください.txt
+#     Mac/      all-in-one installer (.pkg: app, AU, VST3)
+#     Windows/  all-in-one installer (.exe: app, VST3)
+#     個別のファイル/  the separate app installers and plugin zips
+# The folders are attached to the run as an artifact (test builds). The signed installers in
+# Dropbox / ファミリー ルーム come from installer/mac/release_mac.sh and installer/windows/release_windows.ps1.
+name: AJT JOY16 build
+
+on:
+  push:
+    paths:
+      - 'vcs3/**'
+      - 'vcs3-advanced/**'
+      - 'vcs3-app/**'
+      - 'vcs3-plugin/**'
+      - '.github/workflows/vcs3-build.yml'
+      - '.github/scripts/dropbox_upload.py'
+  workflow_dispatch:
+
+jobs:
+  app:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            script: dist:mac
+            files: vcs3-app/dist/*.dmg
+            name: app-mac
+          - os: windows-latest
+            script: dist:win
+            files: vcs3-app/dist/*.exe
+            name: app-windows
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: vcs3-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run ${{ matrix.script }}
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: ${{ matrix.files }}
+          if-no-files-found: error
+
+  plugin-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S vcs3-plugin -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 -DJOY16_WITH_AAX=ON
+      - name: Build
+        run: cmake --build build --config Release --parallel 4
+      - name: Sign (ad-hoc), check the AU, package
+        run: |
+          A="build/VCS3PinMatrix_artefacts/Release"
+          F="build/JOY16FX_artefacts/Release"
+          # every binary must run on macOS 11+, not only on the runner's own macOS
+          for b in "$A/AU/AJT JOY16.component/Contents/MacOS/AJT JOY16" "$A/VST3/AJT JOY16.vst3/Contents/MacOS/AJT JOY16" "$A/Standalone/AJT JOY16.app/Contents/MacOS/AJT JOY16" \
+                   "$F/AU/AJT JOY16 FX.component/Contents/MacOS/AJT JOY16 FX" "$F/VST3/AJT JOY16 FX.vst3/Contents/MacOS/AJT JOY16 FX"; do
+            for arch in arm64 x86_64; do
+              m=$(vtool -arch $arch -show-build "$b" | awk '/minos/{print $2}')
+              echo "$b [$arch] minos=$m"
+              [ "${m%%.*}" -le 11 ] || { echo "binary requires macOS $m"; exit 1; }
+            done
+          done
+          for f in "$A/VST3/AJT JOY16.vst3" "$A/AU/AJT JOY16.component" "$A/Standalone/AJT JOY16.app" "$F/VST3/AJT JOY16 FX.vst3" "$F/AU/AJT JOY16 FX.component"; do
+            codesign --force --deep --sign - "$f"
+          done
+          mkdir -p ~/Library/Audio/Plug-Ins/Components
+          cp -R "$A/AU/AJT JOY16.component" "$F/AU/AJT JOY16 FX.component" ~/Library/Audio/Plug-Ins/Components/
+          killall -9 AudioComponentRegistrar 2>/dev/null || true
+          auval -v aumu Jy16 Ajts
+          auval -v aumf Jy1F Ajts
+          mkdir out
+          cp -R "$A/VST3/AJT JOY16.vst3" "$A/AU/AJT JOY16.component" "$A/Standalone/AJT JOY16.app" "$F/VST3/AJT JOY16 FX.vst3" "$F/AU/AJT JOY16 FX.component" out/
+          cp vcs3-plugin/INSTALL.txt out/
+          (cd out && zip -qry ../AJT-JOY16-Plugin-macOS.zip .)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: plugin-mac
+          path: AJT-JOY16-Plugin-macOS.zip
+          if-no-files-found: error
+
+  plugin-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: WebView2 SDK (for the panel)
+        shell: pwsh
+        run: |
+          Register-PackageSource -ProviderName NuGet -Name nugetRepository -Location https://www.nuget.org/api/v2 -Force
+          Install-Package Microsoft.Web.WebView2 -Scope CurrentUser -RequiredVersion 1.0.1901.177 -Source nugetRepository -Force
+      - name: Configure
+        run: cmake -S vcs3-plugin -B build -A x64 -DJOY16_WITH_AAX=ON
+      - name: Build
+        run: cmake --build build --config Release --parallel 4
+      - name: Package
+        shell: pwsh
+        run: |
+          $A = "build/VCS3PinMatrix_artefacts/Release"
+          New-Item -ItemType Directory out | Out-Null
+          Copy-Item -Recurse "$A/VST3/AJT JOY16.vst3" out/
+          Copy-Item -Recurse "build/JOY16FX_artefacts/Release/VST3/AJT JOY16 FX.vst3" out/
+          Copy-Item "$A/Standalone/AJT JOY16.exe" out/
+          Copy-Item vcs3-plugin/INSTALL.txt out/
+          Compress-Archive -Path out/* -DestinationPath AJT-JOY16-Plugin-Windows.zip
+          # unsigned AAX, only to test the installer's AAX component (Pro Tools needs the PACE-signed one)
+          New-Item -ItemType Directory aaxtest | Out-Null
+          Copy-Item -Recurse "$A/AAX/AJT JOY16.aaxplugin" aaxtest/
+          Copy-Item -Recurse "build/JOY16FX_artefacts/Release/AAX/AJT JOY16 FX.aaxplugin" aaxtest/
+      - name: Check installer/windows/release_windows.ps1 parses (Windows PowerShell 5.1 and pwsh)
+        shell: pwsh
+        run: |
+          $chk = '$e=$null;$t=$null;[void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path "installer/windows/release_windows.ps1"),[ref]$t,[ref]$e);if($e){$e|%{"$($_.Extent.StartLineNumber): $($_.Message)"};exit 1}else{"parse ok"}'
+          powershell -NoProfile -Command $chk; if ($LASTEXITCODE -ne 0) { exit 1 }
+          pwsh -NoProfile -Command $chk;       if ($LASTEXITCODE -ne 0) { exit 1 }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: plugin-windows-aaxtest
+          path: aaxtest
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: plugin-windows
+          path: AJT-JOY16-Plugin-Windows.zip
+          if-no-files-found: error
+
+  installer-mac:
+    needs: [plugin-mac]
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build the app bundle
+        working-directory: vcs3-app
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: |
+          npm ci
+          npm run sync
+          npx electron-builder --mac dir --universal
+      - uses: actions/download-artifact@v4
+        with:
+          name: plugin-mac
+          path: parts
+      - name: Build the all-in-one .pkg
+        run: |
+          set -e
+          V=$(node -p "require('./vcs3-app/package.json').version")
+          APP=$(find vcs3-app/dist -maxdepth 2 -name "AJT JOY16.app" | head -1)
+          (cd parts && unzip -q AJT-JOY16-Plugin-macOS.zip -d plug)
+          mkdir -p stage/app/Applications stage/au/Library/Audio/Plug-Ins/Components stage/vst3/Library/Audio/Plug-Ins/VST3 pk
+          cp -R "$APP" stage/app/Applications/
+          cp -R "parts/plug/AJT JOY16.component" "parts/plug/AJT JOY16 FX.component" stage/au/Library/Audio/Plug-Ins/Components/
+          cp -R "parts/plug/AJT JOY16.vst3" "parts/plug/AJT JOY16 FX.vst3" stage/vst3/Library/Audio/Plug-Ins/VST3/
+          for c in app au vst3; do
+            # keep bundles where we put them (no relocation to copies found elsewhere)
+            pkgbuild --analyze --root "stage/$c" "pk/$c.plist"
+            # top-level entries only (nested bundles are listed under ChildBundles, not as array items)
+            i=0
+            while /usr/libexec/PlistBuddy -c "Print :$i" "pk/$c.plist" >/dev/null 2>&1; do
+              /usr/libexec/PlistBuddy -c "Set :$i:BundleIsRelocatable false" "pk/$c.plist" 2>/dev/null \
+                || /usr/libexec/PlistBuddy -c "Add :$i:BundleIsRelocatable bool false" "pk/$c.plist"
+              i=$((i+1))
+            done
+            pkgbuild --root "stage/$c" --component-plist "pk/$c.plist" --identifier "com.ajitosounds.joy16.$c" --version "$V" --install-location / "pk/$c.pkg"
+          done
+          # CI cannot PACE-sign, so its test .pkg has no AAX; installer/mac/release_mac.sh adds it on Gota's Mac
+          sed -e "s/VERSION/$V/g" -e '/<!-- aax -->/d' installer/mac/distribution.xml > pk/distribution.xml
+          productbuild --distribution pk/distribution.xml --resources installer/mac/resources --package-path pk "AJT-JOY16-Installer-$V.pkg"
+          pkgutil --check-signature "AJT-JOY16-Installer-$V.pkg" || true
+          pkgutil --payload-files "pk/au.pkg" | head
+          ls -l AJT-JOY16-Installer-*.pkg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-mac
+          path: AJT-JOY16-Installer-*.pkg
+          if-no-files-found: error
+
+  installer-windows:
+    needs: [plugin-windows]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build the app folder
+        working-directory: vcs3-app
+        run: |
+          npm ci
+          npm run sync
+          npx electron-builder --win dir --x64
+      - uses: actions/download-artifact@v4
+        with:
+          name: plugin-windows
+          path: parts
+      - name: Build the all-in-one installer
+        shell: pwsh
+        run: |
+          $V = node -p "require('./vcs3-app/package.json').version"
+          Expand-Archive parts/AJT-JOY16-Plugin-Windows.zip -DestinationPath parts/plug
+          choco install innosetup -y --no-progress
+          $iscc = Get-ChildItem "C:\Program Files (x86)\Inno Setup *\ISCC.exe" | Select-Object -First 1
+          & $iscc.FullName "/DAppVersion=$V" "/DAppDir=$PWD\vcs3-app\dist\win-unpacked" "/DVst3Dir=$PWD\parts\plug\AJT JOY16.vst3" "/DVst3FxDir=$PWD\parts\plug\AJT JOY16 FX.vst3" "/O$PWD" installer/windows/joy16.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Get-ChildItem AJT-JOY16-Installer-*.exe
+      - uses: actions/download-artifact@v4
+        with:
+          name: plugin-windows-aaxtest
+          path: aaxtest
+      - name: Check the installer script with the AAX component (not shipped)
+        shell: pwsh
+        run: |
+          $V = node -p "require('./vcs3-app/package.json').version"
+          $iscc = Get-ChildItem "C:\Program Files (x86)\Inno Setup *\ISCC.exe" | Select-Object -First 1
+          & $iscc.FullName "/DAppVersion=$V" "/DAppDir=$PWD\vcs3-app\dist\win-unpacked" "/DVst3Dir=$PWD\parts\plug\AJT JOY16.vst3" "/DVst3FxDir=$PWD\parts\plug\AJT JOY16 FX.vst3" "/DAaxDir=$PWD\aaxtest\AJT JOY16.aaxplugin" "/DAaxFxDir=$PWD\aaxtest\AJT JOY16 FX.aaxplugin" "/O$PWD\aaxcheck" installer/windows/joy16.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Get-ChildItem aaxcheck
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-windows
+          path: AJT-JOY16-Installer-*.exe
+          if-no-files-found: error
+
+  bundle:
+    needs: [app, plugin-mac, plugin-windows, installer-mac, installer-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: parts
+      - name: Make the Retail and Complimentary folders
+        run: |
+          set -e
+          V=$(node -p "require('./vcs3-app/package.json').version")
+          DAY=$(TZ=Asia/Tokyo date +%Y%m%d)
+          mkdir -p out
+          for KIND in Retail Complimentary; do
+            D="out/AJITO_SOUNDS_AJT_JOY16_v${V}_${KIND}_${DAY}"
+            mkdir -p "$D"
+            # no serial system yet: both editions carry the same installers, only the README greeting differs
+            cp parts/installer-mac/*.pkg "$D/AJITO_SOUNDS_AJT_JOY16_Mac_v${V}_${DAY}_${KIND}.pkg"
+            cp parts/installer-windows/*.exe "$D/AJITO_SOUNDS_AJT_JOY16_Win_v${V}_${DAY}_${KIND}.exe"
+            if [ "$KIND" = Retail ]; then
+              JA="お求めいただき、ありがとうございます。"; EN="Thank you for your purchase."
+            else
+              JA="AJITO SOUNDS からの贈呈版です。どうぞお楽しみください。"; EN="This is a complimentary copy from AJITO SOUNDS. Enjoy."
+            fi
+            sed -e "s/VERSION/${V}/" -e "s/__GREETING__/${JA}/" installer/dist/README_ja.txt > "$D/README_はじめに.txt"
+            sed -e "s/VERSION/${V}/" -e "s/__GREETING__/${EN}/" installer/dist/README_en.txt > "$D/README_EN.txt"
+            (cd "$D" && sha256sum *.pkg *.exe > SHA256.txt)
+            {
+              echo "AJT JOY16 v${V}  ${KIND}  $(TZ=Asia/Tokyo date +%F) (Mac + Windows)"
+              echo "source: ${GITHUB_REPOSITORY}@${GITHUB_SHA::7} (${GITHUB_REF_NAME}), build run ${GITHUB_RUN_ID}"
+              echo "contents: AJT JOY16 (instrument, AU aumu Jy16 Ajts / VST3) + AJT JOY16 FX (Audio FX, AU aumf Jy1F Ajts / VST3) + desktop app"
+              echo "checks: macOS binaries minos <= 11 (arm64, x86_64); auval -v on both AUs = pass"
+              echo "Mac .pkg: in Dropbox it comes from installer/mac/release_mac.sh on Gota's Mac (Developer ID, PACE-signed AAX, notarized);"
+              echo "          the .pkg in this GitHub artifact is an ad-hoc signed test build without AAX"
+              echo "Win .exe: in Dropbox it comes from installer/windows/release_windows.ps1 (PACE-signed AAX, Certum-signed);"
+              echo "          the .exe in this GitHub artifact is an unsigned test build without AAX"
+              echo "serial: none (Retail and Complimentary installers are identical)"
+            } > "$D/BUILT_FROM.txt"
+          done
+          find out -type f -exec ls -l {} \;
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AJT-JOY16-Retail-Complimentary
+          path: out
+          if-no-files-found: error
+      # Nothing goes to Dropbox from here: the installers in the family room are signed on
+      # Gota's machines (installer/mac/release_mac.sh, installer/windows/release_windows.ps1),
+      # and an upload from CI would overwrite them or start a stray dated folder.

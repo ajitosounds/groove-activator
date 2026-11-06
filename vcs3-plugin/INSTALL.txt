@@ -1,0 +1,30 @@
+AJT JOY16（Advanced）プラグイン
+================================
+AJITO SOUNDS
+
+入っているもの
+  Mac:     AJT JOY16.vst3 / AJT JOY16.component（AU）/ AJT JOY16.app（単体アプリ）
+           AJT JOY16 FX.vst3 / AJT JOY16 FX.component（エフェクト版）
+  Windows: AJT JOY16.vst3 / AJT JOY16 FX.vst3（エフェクト版）/ AJT JOY16.exe（単体アプリ）
+
+入れる場所
+  Mac  VST3: /Library/Audio/Plug-Ins/VST3/        （自分だけなら ~/Library/Audio/Plug-Ins/VST3/）
+  Mac  AU:   /Library/Audio/Plug-Ins/Components/  （自分だけなら ~/Library/Audio/Plug-Ins/Components/）
+  Win  VST3: C:\Program Files\Common Files\VST3\
+
+入れたら DAW でプラグインを再スキャンしてください。インストゥルメント（音源）として
+「AJITO SOUNDS」→「AJT JOY16」に、エフェクト（Audio FX）として「AJT JOY16 FX」に出てきます。
+FX 版はトラックの音が INPUT CH1（左）/ CH2（右）の行に入ります。
+
+はじめて使うとき
+  署名（Apple の公証 / Windows のコード署名）をしていないので、警告が出ることがあります。
+  Mac で「開発元を確認できない」「壊れている」と出たら、ターミナルで次を実行してから DAW を起動し直してください。
+    xattr -dr com.apple.quarantine "/Library/Audio/Plug-Ins/VST3/AJT JOY16.vst3"
+    xattr -dr com.apple.quarantine "/Library/Audio/Plug-Ins/Components/AJT JOY16.component"
+  Windows の単体アプリで SmartScreen が出たら「詳細情報」→「実行」。
+  画面の表示に Microsoft Edge WebView2 ランタイムを使います（Windows 10/11 には通常入っています）。
+
+使い方
+  画面は Advanced 版と同じです。音と MIDI は DAW から来ます。MPE 鍵盤もそのまま使えます
+  （チャンネルごとのピッチベンド ±48 半音、押し込みは 17 行、スライド（CC74）は 18 行）。
+  パッチ（つまみ・ピン・ボイス数など）は DAW のプロジェクトに保存されます。

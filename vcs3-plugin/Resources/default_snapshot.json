@@ -1,0 +1,112 @@
+{
+ "patch": {
+  "p": {
+   "o1sin": 8,
+   "envA": 0.01,
+   "envOn": 0.1,
+   "envD": 0.5,
+   "sigLvl": 8,
+   "out1Lvl": 8.5,
+   "out2Lvl": 8.5
+  },
+  "pins": [
+   [
+    "in1",
+    "o1f",
+    "w"
+   ],
+   [
+    "o1sin",
+    "env",
+    "w"
+   ],
+   [
+    "env",
+    "out1",
+    "w"
+   ],
+   [
+    "env",
+    "out2",
+    "w"
+   ]
+  ]
+ },
+ "p": {
+  "o1f": 369.99,
+  "o1shape": 0.5,
+  "o1sin": 8,
+  "o1saw": 0,
+  "o2f": 369.99,
+  "o2shape": 0.5,
+  "o2sqr": 0,
+  "o2tri": 0,
+  "o3f": 2,
+  "o3shape": 0.5,
+  "o3sqr": 0,
+  "o3tri": 0,
+  "noiseCol": 0,
+  "noiseLvl": 0,
+  "ringLvl": 0,
+  "filtF": 1000,
+  "filtRes": 0,
+  "filtLvl": 0,
+  "envA": 0.01,
+  "envOn": 0.1,
+  "envD": 0.5,
+  "envOff": 10,
+  "trapLvl": 0,
+  "sigLvl": 8,
+  "dkFreq": 369.99,
+  "dkSpread": 0,
+  "dkDyn": 0,
+  "dkLvl": 0,
+  "in1Lvl": 3.2,
+  "in2Lvl": 5,
+  "revMix": 0,
+  "revLvl": 0,
+  "out1Lvl": 8.5,
+  "out1Filt": 0,
+  "out1Pan": -0.5,
+  "out2Lvl": 8.5,
+  "out2Filt": 0,
+  "out2Pan": 0.5,
+  "stkXr": 5,
+  "stkYr": 5,
+  "master": 8,
+  "analog": 3,
+  "kbdGlide": 0
+ },
+ "pins": {
+  "s": [
+   7,
+   0,
+   11,
+   11
+  ],
+  "d": [
+   8,
+   3,
+   1,
+   2
+  ],
+  "g": [
+   1,
+   1,
+   1,
+   1
+  ]
+ },
+ "dk": {
+  "in1Sig": false,
+  "in2Key": false,
+  "in1Ext": false,
+  "in2Ext": false,
+  "priority": "high"
+ },
+ "voices": 1,
+ "stick": [
+  0,
+  0
+ ]
+}
